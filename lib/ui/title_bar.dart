@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/global/config.dart';
@@ -68,6 +70,7 @@ class _TitleBarState extends State<TitleBar> {
       children: [
         Text(
           title,
+          textAlign: Platform.isMacOS ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: Theme.of(context).colorScheme.inverseSurface,
             fontSize: titleBarHeight * 0.5,
@@ -83,24 +86,28 @@ class _TitleBarState extends State<TitleBar> {
               // double-tap to maximize
               onDoubleTap: toggleMaximize,
             )
-            .padding(left: 8)
+            .padding(horizontal: 8)
             .expanded(),
-        // minimize button
-        RawMaterialButton(
-          onPressed: windowManager.minimize,
-          child: const Icon(Icons.horizontal_rule_rounded, size: 12),
-        ).constrained(width: titleBarButtonWidth),
-        // maximize button
-        const RawMaterialButton(
-          onPressed: toggleMaximize,
-          child: Icon(Icons.crop_square_rounded, size: 12),
-        ).constrained(width: titleBarButtonWidth),
-        // close button
-        RawMaterialButton(
-          onPressed: Lifecycle.instance.shutdown.execute,
-          child: const Icon(Icons.close_rounded, size: 14),
-        ).constrained(width: titleBarButtonWidth),
+
+        /// Only build title bar buttons on Windows
+        if (Platform.isWindows) ...[
+          // minimize button
+          RawMaterialButton(
+            onPressed: windowManager.minimize,
+            child: const Icon(Icons.horizontal_rule_rounded, size: 12),
+          ).constrained(width: titleBarButtonWidth),
+          // maximize button
+          const RawMaterialButton(
+            onPressed: toggleMaximize,
+            child: Icon(Icons.crop_square_rounded, size: 12),
+          ).constrained(width: titleBarButtonWidth),
+          // close button
+          RawMaterialButton(
+            onPressed: Lifecycle.instance.shutdown.execute,
+            child: const Icon(Icons.close_rounded, size: 14),
+          ).constrained(width: titleBarButtonWidth),
+        ],
       ],
-    ).backgroundColor(Theme.of(context).colorScheme.inversePrimary);
+    ).height(24).backgroundColor(Theme.of(context).colorScheme.inversePrimary);
   }
 }
