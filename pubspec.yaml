@@ -1,0 +1,144 @@
+name: tmv
+description: "taiks' manga viewer"
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0-156.0.dev <4.0.0'
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+
+  archive: ^3.4.10
+  collection: ^1.18.0
+  #  cupertino_icons: ^1.0.6
+  desktop_drop: ^0.4.4
+  file: ^7.0.0
+  file_picker: ^6.1.1
+  #  flutter_oss_licenses: ^2.0.1 # dart run flutter_oss_licenses:generate.dart
+  flutter_staggered_grid_view: ^0.7.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  image: ^4.1.7
+  intl: ^0.19.0
+  just_the_tooltip: ^0.0.12
+  logger: ^2.0.2+1
+  lpinyin: ^2.0.3
+  #  material_symbols_icons: ^4.2719.3
+  #  media_kit: ^1.1.10
+  #  media_kit_video: ^1.2.4
+  #  media_kit_libs_audio: ^1.0.4
+  #  media_kit_libs_video: ^1.0.4
+  package_info_plus: ^5.0.1
+  path: ^1.9.0
+  path_provider: ^2.1.2
+  styled_widget: ^0.4.1
+  url_launcher: ^6.2.5
+  uuid: ^4.3.3
+  window_manager: ^0.3.8
+  yaml: ^3.1.2
+  yaml_writer: ^2.0.0
+
+dev_dependencies:
+  build_runner: ^2.4.8 # dart run build_runner build --delete-conflicting-outputs
+  flutter_launcher_icons: ^0.13.1 # dart run flutter_launcher_icons
+  flutter_test:
+    sdk: flutter
+  hive_generator: ^2.0.1
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^3.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/images/
+    - assets/fonts/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/assets-and-images/#resolution-aware
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/assets-and-images/#from-packages
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  fonts:
+    - family: HarmonyOS_Sans_SC
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Thin.ttf
+          weight: 100
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
+          weight: 300
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 700
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Black.ttf
+          weight: 900
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/custom-fonts/#from-packages
+
+flutter_launcher_icons:
+  image_path_android: "assets/icon.png"
+  image_path_ios: "assets/icon.png"
+  android: true # can specify file name here e.g. "ic_launcher"
+  ios: false # can specify file name here e.g. "My-Launcher-Icon"only available for Android 13 devices and above
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  remove_alpha_ios: true
+  background_color_ios: "#ffffff"
+  web:
+    generate: true
+    image_path: "assets/icon.png"
+    background_color: "#000000"
+    theme_color: "#000000"
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
+    icon_size: 256 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/icon.png"
