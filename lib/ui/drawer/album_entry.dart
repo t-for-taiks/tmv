@@ -61,7 +61,13 @@ class _AlbumEntryState extends State<AlbumEntry> {
             icon: Icons.drive_folder_upload,
             onSelected: () {
               if (widget.cache.source is DirectoryMangaSource) {
-                widget.openGalleryCallback();
+                if (widget.cache.containsSub) {
+                  widget.openGalleryCallback();
+                } else {
+                  showDefaultDialog(
+                      context: context,
+                      child: const Text("Only 1 manga found"));
+                }
               } else {
                 showDefaultDialog(
                     context: context,

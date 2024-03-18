@@ -310,7 +310,7 @@ class _SelectViewState extends State<SelectView> {
     // build MangaSource (detect archive files and directories, skip media)
     final sources =
         (await Future.wait(dirEntries.whereNot(ExtensionFilter.media.test).map(
-                  (path) => MangaSource.fromPath(path, false, signal)
+                  (path) => MangaSource.fromPath(path, null, signal)
                       .asFuture
                       .whenComplete(
                         () => signal.setProgress(current: signal.current + 1),

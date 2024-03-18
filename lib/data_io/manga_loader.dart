@@ -50,6 +50,8 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
 
   bool get containsSub => false;
 
+  bool recursive = true;
+
   String? get path {
     switch (this) {
       case NullMangaSource _:
@@ -360,8 +362,6 @@ class DirectoryMangaSource extends MangaSource
     with ReadyFlagMixin<MangaSource>, FileCache {
   final String directoryPath;
 
-  final bool recursive;
-
   @override
   bool containsSub = false;
 
@@ -375,7 +375,9 @@ class DirectoryMangaSource extends MangaSource
   @override
   String? getRelativePath(String file) => relative(file, from: directoryPath);
 
-  DirectoryMangaSource(this.directoryPath, {this.recursive = true});
+  DirectoryMangaSource(this.directoryPath, {bool recursive = true}) {
+    this.recursive = recursive;
+  }
 
   @override
   String toString() => "DirectoryMangaSource($directoryPath)";
@@ -410,7 +412,7 @@ class DirectoryMangaSource extends MangaSource
   @override
   void release() {
     super.release();
-    files.clear();
+    dispose();
   }
 
   @override
@@ -438,7 +440,7 @@ class DirectoryMangaSource extends MangaSource
   }
 
   @override
-  void dispose() {}
+  void dispose() => files.clear();
 }
 
 class MangaSourceAdapter extends TypeAdapter<MangaSource> {

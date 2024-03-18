@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
-import 'package:tmv/data_io/file/file_filter.dart';
 import 'package:tmv/data_io/persistence/thumbnail.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
@@ -143,6 +142,10 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   AsyncOut<void> getReady(AsyncSignal signal) async {
     final stopwatch = Stopwatch()..start();
     if (!loadedFromStorage) {
+      // build a temp source with recursion off
+      final source = MangaSource.fromIdentifier(this.source.identifier);
+      source.recursive = false;
+
       await source.ensureReady.execute(signal);
       length = source.length;
       log.t((
@@ -180,7 +183,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
         "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
       ));
       stopwatch.reset();
-      source.release();
+      source.dispose();
     }
     searchableText = Searchable(title + info.toString());
     log.t((
