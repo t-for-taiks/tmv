@@ -30,9 +30,9 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   @override
   String get boxPath => _boxPath;
 
-  static AsyncOut<MangaCache> tryLoad(String boxKey, AsyncSignal signal) async {
+  static AsyncOut<MangaCache> tryLoad(String identifier, AsyncSignal signal) async {
     // final stopwatch = Stopwatch()..start();
-    final result = await Storage.tryLoad<MangaCache>(_boxPath, boxKey, signal);
+    final result = await Storage.tryLoad<MangaCache>(_boxPath, identifier, signal);
     // log.d("MangaCache.tryLoad $boxKey in ${stopwatch.elapsedMilliseconds}ms");
     return result;
   }
@@ -129,9 +129,13 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       .handleError((error) => Err(error))
       .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
 
-  AsyncOut<ThumbnailInfo> _loadThumbnail(AsyncSignal signal) => List.generate(
+  AsyncOut<ThumbnailInfo> _loadThumbnail(
+    MangaViewData viewData,
+    AsyncSignal signal,
+  ) =>
+      List.generate(
         4,
-        (index) => viewData!.getFileData
+        (index) => viewData.getFileData
             .bind(index, Priority.high)
             .chain(ThumbnailProcessor.process),
       )
@@ -164,11 +168,10 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       ));
       stopwatch.reset();
       if (thumbnail == null) {
-        viewData ??= MangaViewData(source);
-        viewData!.cache = this;
-        await viewData!.ensureReady.execute(signal);
+        final viewData = MangaViewData(source);
+        await viewData.ensureReady.execute(signal);
         thumbnail = await _loadThumbnail
-            .execute(signal)
+            .execute(viewData, signal)
             // in case there's no thumbnail generated
             // if there's a sub-dir, use an empty thumbnail
             .onFail((value, signal) =>
@@ -176,16 +179,19 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
             // otherwise, throw error
             .throwErr();
         await thumbnail!.readDimensions().throwErr();
+        log.t((
+          "MangaCache",
+          "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
+        ));
         markAsDirty();
+        viewData.dispose();
       }
-      log.t((
-        "MangaCache",
-        "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
-      ));
       stopwatch.reset();
       source.dispose();
     }
     searchableText = Searchable(title + info.toString());
+    viewData ??= MangaViewData(source);
+    viewData!.cache = this;
     log.t((
       "MangaCache",
       "Searchable done ${source.identifier} in ${stopwatch.elapsed}",

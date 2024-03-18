@@ -41,7 +41,7 @@ class PriorityPool<Key, Data> extends Iterable<Data> {
 
   void updateData(Key key, Data data) => _map[key]!.data = data;
 
-  Data operator [](Key key) => _map[key]!.data;
+  Data? operator [](Key key) => _map[key]?.data;
 
   bool containsKey(Key key) => _map.containsKey(key);
 

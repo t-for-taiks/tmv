@@ -6,6 +6,7 @@ import 'package:flutter_context_menu/flutter_context_menu.dart';
 import 'package:path/path.dart';
 import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/data_io/manga_loader.dart';
+import 'package:tmv/global/async/async.dart';
 import 'package:tmv/ui/drawer/about.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yaml_writer/yaml_writer.dart';
@@ -145,7 +146,29 @@ class _AlbumEntryState extends State<AlbumEntry> {
                 launchUrl(toUri(widget.cache.source.path!));
               }
             },
-          )
+          ),
+          MenuItem(
+            label: 'Set as Parent Gallery Cover',
+            icon: Icons.image_outlined,
+            onSelected: () {
+              if (widget.cache.source.path == null) {
+                showDefaultDialog(
+                  context: context,
+                  child: const Text("No path available"),
+                );
+                return;
+              }
+              MangaCache.createFromIdentifier
+                  .execute(
+                      DirectoryMangaSource(dirname(widget.cache.source.path!))
+                          .identifier)
+                  .map((cache) {
+                cache.thumbnail = widget.cache.thumbnail;
+                cache.ensureReady.execute();
+                cache.markAsDirty();
+              });
+            },
+          ),
         ],
       );
 

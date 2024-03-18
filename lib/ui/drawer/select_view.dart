@@ -252,8 +252,9 @@ class _SelectViewState extends State<SelectView> {
               itemCount: filteredList.length,
               itemBuilder: (context, index) => AlbumEntry(
                   cache: filteredList[index],
-                  openMangaCallback: () =>
-                      widget.openMangaCallback(filteredList[index]),
+                  openMangaCallback: () {
+                    widget.openMangaCallback(filteredList[index]);
+                  },
                   openGalleryCallback: () {
                     _applyPath(
                       (filteredList[index].source as DirectoryMangaSource)
@@ -346,6 +347,11 @@ class _SelectViewState extends State<SelectView> {
             .execute(source.identifier, signal)
             .chain(ReadyFlagMixin.makeReady))
         .executeLimited(signal, 16);
+    // if parent gallery lacks a thumbnail, use the first album's thumbnail
+    final parentCache = await MangaCache.tryLoad.execute(
+      DirectoryMangaSource(AppStorage.instance.galleryPath!).identifier,
+      signal,
+    );
     // wait for load and add to list dynamically
     await for (final cache in cacheStream) {
       signal.setProgress(current: signal.current + 1);
@@ -355,6 +361,9 @@ class _SelectViewState extends State<SelectView> {
       if (cache is Ok) {
         log.t(("Album", "Loaded ${cache.value.title}"));
         mangaList.add(cache.value);
+        if (parentCache is Ok && parentCache.value.thumbnail?.isEmpty == true) {
+          parentCache.valueOrNull?.thumbnail = cache.value.thumbnail;
+        }
         setState(() {});
       } else {
         log.t(("Album", "failed to load $cache"));

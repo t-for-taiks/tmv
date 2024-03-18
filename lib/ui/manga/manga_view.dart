@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_context_menu/flutter_context_menu.dart';
 import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/data_io/file/file_selection.dart';
+import 'package:tmv/data_io/persistence/thumbnail.dart';
 import 'package:tmv/global/collection/collection.dart';
 import 'package:tmv/global/config.dart';
 import 'package:tmv/ui/manga/media_display.dart';
@@ -20,6 +22,7 @@ import '../../data_io/persistence/manga_cache.dart';
 import '../../data_io/persistence/persistence.dart';
 import '../../global/global.dart';
 import '../../global/helper.dart';
+import '../drawer/about.dart';
 import 'manga_scroll.dart';
 
 part 'manga_view.g.dart';
@@ -253,6 +256,37 @@ class MangaViewState extends State<MangaView>
     release();
   }
 
+  ContextMenu _buildContextMenu(BuildContext context) {
+    return ContextMenu(
+      entries: [
+          MenuItem(
+            label: 'Set as Manga Cover',
+            icon: Icons.image_outlined,
+            onSelected: () async {
+              if (data!.source.path == null) {
+                showDefaultDialog(
+                  context: context,
+                  child: const Text("No path available"),
+                );
+                return;
+              }
+              final thumbnail = data!.getFileData
+                  .execute(data!.currentPage, Priority.high)
+                  .chain(ThumbnailProcessor.process);
+              final cache =
+                  MangaCache.createFromIdentifier.execute(source.identifier);
+              await Future.wait([thumbnail, cache]);
+              if (thumbnail.isSuccessful && cache.isSuccessful) {
+                cache.unwrap.thumbnail = thumbnail.unwrap;
+                cache.unwrap.ensureReady.execute();
+                cache.unwrap.markAsDirty();
+              }
+            },
+          ),
+      ],
+    );
+  }
+
   /// If current image is not loaded, remove all non-ready images
   /// (part of [_updateChildren])
   ///
@@ -394,7 +428,7 @@ class MangaViewState extends State<MangaView>
             ));
       }
       return;
-    } else if (!children[currentKey].isLoaded) {
+    } else if (!children[currentKey]!.isLoaded) {
       return;
     }
 
@@ -581,21 +615,24 @@ class MangaViewState extends State<MangaView>
       behavior: HitTestBehavior.opaque,
       child: Row(
         children: [
-          Stack(
-            children: [
-              /// build all non-current behind
-              ...children.entries
-                  .where((entry) => entry.key != currentShowKey)
-                  .map((entry) => entry.value),
+          ContextMenuRegion(
+            contextMenu: _buildContextMenu(context),
+            child: Stack(
+              children: [
+                /// build all non-current behind
+                ...children.entries
+                    .where((entry) => entry.key != currentShowKey)
+                    .map((entry) => entry.value),
 
-              /// build current
-              if (currentShowKey != null &&
-                  children.containsKey(currentShowKey!))
-                children[currentShowKey!],
+                /// build current
+                if (currentShowKey != null &&
+                    children.containsKey(currentShowKey!))
+                  children[currentShowKey!]!,
 
-              /// build debug info
-              if (kDebugMode) _buildDebug(context),
-            ],
+                /// build debug info
+                if (kDebugMode) _buildDebug(context),
+              ],
+            ),
           ).height(double.infinity).expanded(),
           Column(
             children: [
