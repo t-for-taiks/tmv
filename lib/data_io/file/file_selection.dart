@@ -1,13 +1,72 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
+import '../../global/global.dart';
 import 'file_filter.dart';
 export 'file_filter.dart';
 import 'filename_sort.dart';
 export 'filename_sort.dart';
 
 part 'file_selection.g.dart';
+
+/// Data for a file with flags
+sealed class FileData {
+  final String? path;
+
+  final String? additionalText;
+
+  final int? byteSize;
+
+  const FileData({
+    this.path,
+    this.additionalText,
+    this.byteSize,
+  });
+}
+
+class ImageData extends FileData {
+  final Uint8List bytes;
+
+  const ImageData({
+    required this.bytes,
+    super.path,
+    super.additionalText,
+    super.byteSize,
+  });
+}
+
+class VideoFileData extends FileData {
+  final String tempPath;
+
+  const VideoFileData({
+    required this.tempPath,
+    super.path,
+    super.additionalText,
+    super.byteSize,
+  });
+
+  static AsyncOut<String> buildPath(Uint8List data, AsyncSignal signal) async {
+    final dir = await getTemporaryDirectory().then((dir) => dir.path);
+    final path = join(dir, uuid.v4());
+    if (signal.isTriggered) {
+      return Err("cancelled");
+    }
+    final file = File(path);
+    try {
+      await file.create(recursive: true);
+      await file.writeAsBytes(data);
+    } catch (e) {
+      return Err(e);
+    }
+    return Ok(path);
+  }
+}
 
 /// A selection of files among all accessible files
 @HiveType(typeId: 5)
@@ -30,12 +89,15 @@ class FileSelection {
 
   List<String> files = [];
 
+  /// Text files are associated if the names match
+  List<String?> additionalTextFiles = [];
+
   Map<String, int> fileIndex = {};
 
   @HiveField(0)
   FileFilter? _extensionFilter;
 
-  FileFilter get extensionFilter => _extensionFilter ?? ExtensionFilter.image;
+  FileFilter get extensionFilter => _extensionFilter ?? ExtensionFilter.media;
 
   set extensionFilter(FileFilter value) {
     _extensionFilter = value;
@@ -76,11 +138,29 @@ class FileSelection {
   FileFilter get filter => extensionFilter & recursionFilter;
 
   void _updateSelection() {
+    final fileList = fileSource();
     files = List.unmodifiable(
-      sorter.sort(fileSource().where(filter.test).toList()),
+      sorter.sort(fileList.where(filter.test).toList()),
     );
     fileIndex = Map.fromEntries(
       files.mapIndexed((index, file) => MapEntry(file, index)),
+    );
+
+    final textFiles = fileList.where(ExtensionFilter.text.test).toList();
+    final textMapping = <String, List<String>>{};
+    for (final file in textFiles) {
+      final name = basenameWithoutExtension(file);
+      textMapping.putIfAbsent(name, () => []).add(file);
+      final shortName = name.replaceAll(RegExp(r"\w+$"), "");
+      textMapping.putIfAbsent(shortName, () => []).add(file);
+    }
+    textMapping.removeWhere((key, value) => value.length > 1);
+    additionalTextFiles = List.unmodifiable(
+      files.map((file) {
+        final name = basenameWithoutExtension(file);
+        final shortName = name.replaceAll(RegExp(r"\w+$"), "");
+        return textMapping[name]?.first ?? textMapping[shortName]?.first;
+      }),
     );
   }
 

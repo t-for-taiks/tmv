@@ -111,24 +111,25 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
         ),
       )
       .take(metaInfoQueryLimit)
-      .map((path) => source.getData.bind(path))
+      .map((path) => source.getData.bind(path, null))
       .executeOrdered(signal)
       .where(Result.isOk)
       .asyncMap((result) => parseYaml<String, dynamic>(result.value, signal))
       .handleError((error) => Err(error))
       .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
 
-  AsyncOut<ThumbnailInfo> _loadThumbnail(AsyncSignal signal) {
+  AsyncOut<ThumbnailInfo> _loadThumbnail(AsyncSignal signal) async {
     if (viewData!.selection.files.isEmpty) {
       return Err("No file found");
     }
-    return source
-        .getData(
-          viewData!.selection.files.first,
-          signal,
-          priority: Priority.high,
-        )
-        .chainAction((bytes) => ThumbnailProcessor.process(bytes, signal));
+    return await viewData!.selection.files
+        .take(4)
+        .map((file) => (signal) => source.getData
+            .execute(file, Priority.high, signal)
+            .chain(ThumbnailProcessor.process))
+        .executeOrdered(signal)
+        .first
+        .catchError((error) => Err(error));
   }
 
   @override
@@ -151,7 +152,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       source.release();
     }
     searchableText = Searchable(title + info.toString());
-    return const Ok();
+    return ok;
   }
 
   @override

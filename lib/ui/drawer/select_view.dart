@@ -135,6 +135,7 @@ class _SelectViewState extends State<SelectView> {
 
               /// Display gallery path
               DropdownButton(
+                isExpanded: true,
                 value: AppStorage.instance.galleryPath,
                 hint: Text(
                   "Select a folder",
@@ -229,7 +230,7 @@ class _SelectViewState extends State<SelectView> {
 
   AsyncOut<void> load(AsyncSignal signal) async {
     if (AppStorage.instance.galleryPath == null) {
-      return const Ok();
+      return ok;
     }
     // wait for 2 seconds when hidden
     if (widget.hidden) {
@@ -279,7 +280,7 @@ class _SelectViewState extends State<SelectView> {
     }
     log.d(("Album", "Loaded ${mangaList.length} albums"));
     setState(() {});
-    return const Ok();
+    return ok;
   }
 
   @override

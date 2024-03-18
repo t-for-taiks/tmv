@@ -53,7 +53,7 @@ class PriorityIsolatePoolManager<Key, In, Out> {
         entry.completer = completer;
         entry.isolate.process(input).then(completer.complete);
       }
-      return const Ok();
+      return ok;
     });
   }
 

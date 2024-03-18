@@ -1,13 +1,3 @@
-import 'package:path/path.dart';
-
-import 'config.dart';
-
-bool isSupportedImageFormat(String filename) =>
-    supportedImageFormats.contains(extension(filename).toLowerCase());
-
-bool isSupportedArchiveFormat(String filename) =>
-    supportedArchiveFormats.contains(extension(filename).toLowerCase());
-
 sealed class Priority implements Comparable<Priority> {
   final int value;
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -9,7 +11,7 @@ import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/data_io/file/file_selection.dart';
 import 'package:tmv/global/collection/collection.dart';
 import 'package:tmv/global/config.dart';
-import 'package:tmv/ui/manga/image_display.dart';
+import 'package:tmv/ui/manga/media_display.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../data_io/file/file_pick.dart';
@@ -78,6 +80,59 @@ class MangaViewData
         }
       });
 
+  AsyncOut<FileData> getFileData(int index,
+      [Priority? priority, AsyncSignal? signal]) async {
+    final file = selection.files[index];
+    final additionalTextFile = selection.additionalTextFiles[index];
+    final String? textData;
+    if (additionalTextFile != null) {
+      textData = await source.getData
+          .execute(additionalTextFile, priority, signal)
+          .map(utf8.decode)
+          .valueOrNull();
+    } else {
+      textData = null;
+    }
+    switch (ExtensionFilter.getType(file)) {
+      case ExtensionFilter.image:
+        return source.getData
+            .execute(file, priority, signal)
+            .map((data) => ImageData(
+                  bytes: data,
+                  path: file,
+                  additionalText: textData,
+                  byteSize: data.length,
+                ));
+      case ExtensionFilter.video:
+        switch (source) {
+          case DirectoryMangaSource _:
+            return VideoFileData(
+              tempPath: source.getFilePath(file)!,
+              path: file,
+              additionalText: textData,
+              byteSize: await File(source.getFilePath(file)!).length(),
+            ).asOk;
+          case ArchiveMangaSource():
+          case WebArchiveMangaSource():
+            return await source.getData.execute(file, priority, signal).chain(
+                  (data, signal) => VideoFileData.buildPath(data, signal).map(
+                    (tempPath) => VideoFileData(
+                      tempPath: tempPath,
+                      path: file,
+                      additionalText: textData,
+                      byteSize: data.length,
+                    ),
+                  ),
+                );
+          case NullMangaSource():
+            throw UnimplementedError();
+        }
+      default:
+        log.w(("MangaView", "Unknown file type: $file"));
+        return Err();
+    }
+  }
+
   @override
   void release() {
     super.release();
@@ -128,7 +183,7 @@ class MangaViewState extends State<MangaView>
     notifyListeners(data);
     if (data == value) {
       if (data == null) {
-        return const Ok();
+        return ok;
       }
       return await data!.ensureReady.execute(signal);
     }
@@ -144,11 +199,13 @@ class MangaViewState extends State<MangaView>
 
   MangaSource get source => data!.source;
 
-  /// Pool of ImageDisplay widgets
-  PriorityPool<String, ImageDisplay> children = PriorityPool();
+  /// Pool of MediaDisplay widgets
+  PriorityPool<String, MediaDisplay> children = PriorityPool();
 
   /// Key of the image with "hidden=false" (only one)
   String? currentShowKey;
+
+  bool showInfo = true;
 
   /// Total bytes of all loaded images in [children]
   int totalBytes = 0;
@@ -192,7 +249,7 @@ class MangaViewState extends State<MangaView>
     children.push(
       currentKey,
       // current image is hidden until loaded
-      _buildImageDisplay(current, hidden: true),
+      _buildMediaDisplay(current, hidden: true),
       0,
     );
   }
@@ -202,11 +259,14 @@ class MangaViewState extends State<MangaView>
   void _updateHidden() {
     final current = data!.currentPage;
     final currentKey = files[current];
-    log.t(("MangaView", "_updateHidden: $currentKey replace $currentShowKey"));
-    if (currentShowKey != null) {
+    if (currentShowKey != null &&
+        currentShowKey != currentKey &&
+        children.containsKey(currentShowKey!)) {
+      log.t(
+          ("MangaView", "_updateHidden: $currentKey replace $currentShowKey"));
       children.updateData(
         currentShowKey!,
-        _buildImageDisplay(
+        _buildMediaDisplay(
           data!.selection.fileIndex[currentShowKey]!,
           hidden: true,
         ),
@@ -214,7 +274,7 @@ class MangaViewState extends State<MangaView>
     }
     children.updateData(
       currentKey,
-      _buildImageDisplay(current, hidden: false),
+      _buildMediaDisplay(current, hidden: false),
     );
     currentShowKey = currentKey;
   }
@@ -297,7 +357,7 @@ class MangaViewState extends State<MangaView>
 
   /// Called on [build] to update [children]
   ///
-  /// (Cannot call [setState] here. [ImageDisplay] created by [_buildImageDisplay]
+  /// (Cannot call [setState] here. [MediaDisplay] created by [_buildMediaDisplay]
   /// will call [setState] when it's loaded)
   void _updateChildren() {
     final current = data!.currentPage;
@@ -309,10 +369,10 @@ class MangaViewState extends State<MangaView>
     ));
     if (!children.containsKey(currentKey)) {
       _loadCurrent();
-      if (currentShowKey != null) {
+      if (currentShowKey != null && children.containsKey(currentShowKey!)) {
         children.updateData(
             currentShowKey!,
-            _buildImageDisplay(
+            _buildMediaDisplay(
               fileIndex[currentShowKey]!,
               hidden: false,
               blurred: true,
@@ -327,9 +387,7 @@ class MangaViewState extends State<MangaView>
         children.values.any((display) => !display.isLoaded);
 
     /// When the current image is loaded, show it and hide others
-    if (children[currentKey].isLoaded && currentKey != currentShowKey) {
-      _updateHidden();
-    }
+    _updateHidden();
 
     /// If any image is not loaded, wait for them to load
     if (hasImageNotLoaded) {
@@ -370,32 +428,33 @@ class MangaViewState extends State<MangaView>
     /// Preload image
     children.push(
       files[index],
-      _buildImageDisplay(index, hidden: true),
+      _buildMediaDisplay(index, hidden: true),
       _computePriority(index),
     );
   }
 
   /// Build one single image, and triggers rebuild when loaded
-  ImageDisplay _buildImageDisplay(
+  MediaDisplay _buildMediaDisplay(
     int index, {
     required bool hidden,
     bool blurred = false,
   }) {
-    final image = ImageDisplay(
+    final image = MediaDisplay(
       key: ValueKey("${source.identifier}:$index"),
-      imageSource: (signal) {
+      dataSource: (signal) {
         if (signal.isTriggered || !isReady) {
           return Err(signal);
         }
-        return source.getData(
-          files[index],
+        return data!.getFileData(
+          index,
+          hidden ? Priority.normal : Priority.high,
           signal,
-          priority: hidden ? Priority.normal : Priority.high,
         );
       },
       hidden: hidden,
       blurred: blurred,
       debugInfo: index,
+      showInfo: showInfo,
     );
     log.t((
       "MangaView",
@@ -476,12 +535,28 @@ class MangaViewState extends State<MangaView>
       behavior: HitTestBehavior.opaque,
       child: Row(
         children: [
-          Stack(children: children.toList()).expanded(),
-          VerticalMangaScroll(
-            index: data!.currentPage,
-            title: files[data!.currentPage],
-            total: length,
-            switchPageCallback: gotoPage,
+          Stack(
+            children: [...children],
+          ).expanded(),
+          Column(
+            children: [
+              VerticalMangaScroll(
+                index: data!.currentPage,
+                title: files[data!.currentPage],
+                total: length,
+                switchPageCallback: gotoPage,
+              ).expanded(),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: showInfo
+                    ? const Icon(Icons.info_rounded)
+                    : const Icon(Icons.info_outline_rounded),
+                onPressed: () => setState(() => showInfo = !showInfo),
+                padding: const EdgeInsets.all(2),
+              ),
+            ],
+          ).backgroundColor(
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
           ),
         ],
       ),
@@ -563,7 +638,7 @@ class MangaViewState extends State<MangaView>
 
   @override
   AsyncOut getReady(AsyncSignal signal) =>
-      data?.ensureReady(signal) ?? const Ok().cast();
+      data?.ensureReady(signal) ?? ok.cast();
 
   @override
   void release() {

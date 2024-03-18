@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../global/config.dart';
 import '../../global/global.dart';
-import '../../global/helper.dart';
 import '../../ui/manga/manga_view.dart';
+import 'file_filter.dart';
 import 'file_io.dart';
 import '../manga_loader.dart';
 
@@ -31,7 +31,7 @@ AsyncOut<MangaViewData> tryOpenWeb(
   }
   try {
     final file = (await files[0]).value;
-    if (isSupportedArchiveFormat(file.name)) {
+    if (ExtensionFilter.archive.test(file.name)) {
       return Ok(
         MangaViewData(WebArchiveMangaSource(file)),
       );
@@ -47,8 +47,7 @@ AsyncOut<MangaViewData> tryOpenWeb(
 AsyncOut<MangaViewData> pickAndOpenFile(AsyncSignal signal) async {
   final result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
-    allowedExtensions: supportedImageFormats
-        .followedBy(supportedArchiveFormats)
+    allowedExtensions: ExtensionFilter.media.allowedExtensions
         .map((s) => s.substring(1))
         .toList(),
     allowMultiple: true,

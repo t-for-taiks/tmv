@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tmv/data_io/persistence/manga_cache.dart';
 import 'package:tmv/data_io/persistence/persistence.dart';
@@ -40,9 +41,10 @@ class Storage {
 
   static AsyncOut<void> init(AsyncSignal signal) async {
     if (hiveDisabled) {
-      return const Ok();
+      return ok;
     }
     WidgetsFlutterBinding.ensureInitialized();
+    MediaKit.ensureInitialized();
     final dir = await getApplicationSupportDirectory();
     log.d(("persistence", "Storage dir: $dir"));
     await Hive.initFlutter(dir.path);
@@ -101,17 +103,17 @@ class Storage {
             .toList();
         _dirtyObjects = unsavedObjects.map((e) => e.tempKey).toSet();
       }
-      return const Ok();
+      return ok;
     });
     // initialize app storage
     await AppStorage.init(signal);
-    return const Ok();
+    return ok;
   }
 
   /// Close temp box and write all objects back
   static AsyncOut<void> shutdown(AsyncSignal signal) async {
     if (hiveDisabled) {
-      return const Ok();
+      return ok;
     }
     log.w("Shutting down");
     // force shutdown after 1 second timeout
@@ -122,7 +124,7 @@ class Storage {
     await tempBox.close();
     await tempBox.deleteFromDisk();
     log.w("Storage shutdown complete");
-    return const Ok();
+    return ok;
   }
 
   /// Path to a temporary box

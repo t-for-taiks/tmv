@@ -28,10 +28,10 @@ abstract mixin class FileCache {
   /// Load data into memory
   @protected
   AsyncOut<Uint8List> loadData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  });
+    String key,[
+    Priority? priority,
+    AsyncSignal? signal,
+  ]);
 
   /// Remove least used entry from memory
   bool _evictOne() {
@@ -54,17 +54,17 @@ abstract mixin class FileCache {
   /// [priority] default to highest priority
   @nonVirtual
   AsyncOut<Uint8List> getData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  }) async {
+    String key,[
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) async {
     if (_cache.containsKey(key)) {
       log.t(("FileCache", "getData($key) hits"));
       return Ok(_cache.access(key));
     }
     log.t(("FileCache", "getData($key) miss"));
     _releaseSpace();
-    return await loadData(key, signal, priority: priority).map((result) {
+    return await loadData(key, priority, signal).map((result) {
       if (!_cache.containsKey(key)) {
         _cache.push(key, result);
       }
@@ -85,9 +85,9 @@ mixin DisabledFileCache implements FileCache {
   /// Now directly call [loadData]
   @override
   AsyncOut<Uint8List> getData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  }) =>
-      loadData(key, signal, priority: priority);
+    String key,[
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) =>
+      loadData(key, priority, signal);
 }

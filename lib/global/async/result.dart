@@ -5,11 +5,13 @@ sealed class Result<T> {
   const Result();
 
   /// Unwrap value
-  T get value {
+  T get value => valueOrNull as T;
+
+  T? get valueOrNull {
     if (this is Ok) {
       return (this as Ok).result as T;
     }
-    throw this;
+    return null;
   }
 
   bool get failed => this is! Ok;
@@ -23,6 +25,8 @@ sealed class Result<T> {
 
   static bool isOk(Result result) => result is Ok;
 }
+
+const ok = Ok();
 
 /// Completed Async value
 class Ok<T> extends Result<T> {
@@ -100,8 +104,4 @@ extension FutureOrAsResult<T> on FutureOr<T> {
     }
     return Ok(this as T);
   }
-}
-
-extension FutureAsResult<T> on Future<T> {
-  Future<Result<T>> get asOk => then((value) => Ok(value));
 }

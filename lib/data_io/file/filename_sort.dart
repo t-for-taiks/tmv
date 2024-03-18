@@ -237,7 +237,7 @@ class _FileTreeNode {
 
 /// Build directory tree and then sort files
 List<String> sortFiles(
-  List<String> files, {
+  Iterable<String> files, {
   DirectorySortBehavior behavior = DirectorySortBehavior.directoryFirst,
   bool reversed = false,
 }) {

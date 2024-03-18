@@ -62,10 +62,34 @@ class ExtensionFilter extends FileFilter {
       allowedExtensions.contains(extension(file).toLowerCase());
 
   /// Image and video
-  static FileFilter media = image | video;
+  static ExtensionFilter media = image | video;
+
+  static FileFilter getType(String path) {
+    if (image.test(path)) {
+      return image;
+    } else if (video.test(path)) {
+      return video;
+    } else if (archive.test(path)) {
+      return archive;
+    } else if (text.test(path)) {
+      return text;
+    } else {
+      return any;
+    }
+  }
+
+  @override
+  operator |(FileFilter other) {
+    if (other is! ExtensionFilter) {
+      return super | other;
+    }
+    return ExtensionFilter(
+      allowedExtensions.union(other.allowedExtensions),
+    );
+  }
 
   /// Some image file extensions supported by Flutter
-  static const FileFilter image = ExtensionFilter({
+  static const ExtensionFilter image = ExtensionFilter({
     '.jpg',
     '.jpeg',
     '.png',
@@ -77,8 +101,10 @@ class ExtensionFilter extends FileFilter {
   });
 
   /// Some archive file extensions supported by Flutter
-  static const FileFilter archive = ExtensionFilter({
+  static const ExtensionFilter archive = ExtensionFilter({
     '.zip',
+    '.cbz',
+    '.cbt',
     '.tar',
     '.gz',
     '.bz2',
@@ -86,7 +112,7 @@ class ExtensionFilter extends FileFilter {
   });
 
   /// Some video file extensions supported by Flutter
-  static const FileFilter video = ExtensionFilter({
+  static const ExtensionFilter video = ExtensionFilter({
     '.webm',
     '.mkv',
     '.flv',
@@ -117,6 +143,12 @@ class ExtensionFilter extends FileFilter {
     '.f4p',
     '.f4a',
     '.f4b',
+  });
+
+  static const ExtensionFilter text = ExtensionFilter({
+    '.txt',
+    '.json',
+    '.yaml',
   });
 
   static const FileFilter any = AllFilter();

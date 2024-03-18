@@ -34,7 +34,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   AsyncOut<void> _applyData(MangaViewData? data, [AsyncSignal? signal]) async =>
       await mangaViewKey.currentState?.setData.execute(data, signal) ??
-      const Ok();
+      ok;
 
   @override
   void initState() {

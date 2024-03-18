@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path/path.dart';
+import 'package:tmv/data_io/file/file_filter.dart';
 import 'package:tmv/global/async/isolate_worker.dart';
 
 import '../global/archive.dart';
@@ -43,16 +44,19 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
   String get userShortName;
 
   /// Relative paths of files (used as key to get data)
-  List<String> get files;
+  List<String> get files => [];
 
-  int get length;
+  int get length => 0;
+
+  /// Get file path from a relative path (if possible)
+  String? getFilePath(String file) => null;
 
   /// Get data from a relative path
   AsyncOut<Uint8List> getData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  });
+    String key, [
+    Priority? priority,
+    AsyncSignal? signal,
+  ]);
 
   void dispose();
 
@@ -72,9 +76,9 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
     AsyncSignal signal,
   ) async {
     if (await FileSystemEntity.isFile(path)) {
-      if (isSupportedArchiveFormat(path)) {
+      if (ExtensionFilter.archive.test(path)) {
         return Ok(ArchiveMangaSource(path));
-      } else if (isSupportedImageFormat(path)) {
+      } else if (ExtensionFilter.media.test(path)) {
         return Ok(DirectoryMangaSource(dirname(path)));
       } else {
         return Err("Unsupported file format");
@@ -103,18 +107,16 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
         throw UnsupportedError("unknown value ${identifier[0]}");
     }
   }
-}
 
-/// Serialization of [MangaSource]
-///
-/// Fields:
-/// - sourceType
-///   - "0": null
-///   - "1": archive
-///   - "2": directory
-///   - "3": web archive (for id purpose only)
-/// - (according to type)
-extension MangaSourceSerialization on MangaSource {
+  /// Serialization of [MangaSource]
+  ///
+  /// Fields:
+  /// - sourceType
+  ///   - "0": null
+  ///   - "1": archive
+  ///   - "2": directory
+  ///   - "3": web archive (for id purpose only)
+  /// - (according to type)
   String get identifier {
     switch (this) {
       case NullMangaSource _:
@@ -130,7 +132,7 @@ extension MangaSourceSerialization on MangaSource {
 }
 
 /// Unknown data source
-class NullMangaSource with ReadyFlagMixin<MangaSource> implements MangaSource {
+class NullMangaSource extends MangaSource with ReadyFlagMixin<MangaSource> {
   final String message;
 
   NullMangaSource(this.message);
@@ -139,20 +141,14 @@ class NullMangaSource with ReadyFlagMixin<MangaSource> implements MangaSource {
   void dispose() {}
 
   @override
-  AsyncOut getReady(AsyncSignal signal) => const Ok();
-
-  @override
-  List<String> get files => [];
-
-  @override
-  int get length => 0;
+  AsyncOut getReady(AsyncSignal signal) => ok;
 
   @override
   AsyncOut<Uint8List> getData(
-    String key,
-    AsyncSignal signal, {
-    Priority? priority = Priority.low,
-  }) =>
+    String key, [
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) =>
       Ok(Uint8List(0));
 
   @override
@@ -163,9 +159,8 @@ class NullMangaSource with ReadyFlagMixin<MangaSource> implements MangaSource {
 }
 
 /// Data from a zip archive
-class ArchiveMangaSource
-    with ReadyFlagMixin<MangaSource>, FileCache
-    implements MangaSource {
+class ArchiveMangaSource extends MangaSource
+    with ReadyFlagMixin<MangaSource>, FileCache {
   final String archivePath;
 
   /// A seperated Isolate will handle file read and decompression
@@ -188,10 +183,10 @@ class ArchiveMangaSource
 
   @override
   AsyncOut<Uint8List> loadData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  }) =>
+    String key, [
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) =>
       ensureReady.execute(signal).chain((_, signal) async {
         if (data != null) {
           return Ok(data![key]!);
@@ -199,7 +194,7 @@ class ArchiveMangaSource
         return await decompressIsolate!.processWithPriority.execute(
           key,
           key,
-          priority,
+          priority ?? Priority.low,
           signal,
         );
       });
@@ -208,11 +203,11 @@ class ArchiveMangaSource
   AsyncOut<void> loadAll(AsyncSignal signal) =>
       ensureReady.execute(signal).chain((_, signal) async {
         if (data != null) {
-          return const Ok();
+          return ok;
         }
         final list = <Uint8List>[];
         for (final key in files) {
-          final result = await loadData(key, signal);
+          final result = await loadData(key, null, signal);
           if (result is! Ok) {
             return result.cast();
           }
@@ -221,7 +216,7 @@ class ArchiveMangaSource
         data = Map.fromEntries(
           list.mapIndexed((index, value) => MapEntry(files[index], value)),
         );
-        return const Ok();
+        return ok;
       });
 
   @override
@@ -249,7 +244,7 @@ class ArchiveMangaSource
       signal,
     );
     // log.t("discovered ${files.length} files from $archivePath");
-    return const Ok();
+    return ok;
   }
 
   @override
@@ -271,9 +266,8 @@ class ArchiveMangaSource
 /// Archive uploaded to web platform
 ///
 /// Archive will be decompressed and stored in memory
-class WebArchiveMangaSource
-    with ReadyFlagMixin<MangaSource>
-    implements MangaSource {
+class WebArchiveMangaSource extends MangaSource
+    with ReadyFlagMixin<MangaSource> {
   final WebFile archiveFile;
 
   Map<String, Uint8List> fileData = {};
@@ -298,7 +292,7 @@ class WebArchiveMangaSource
           .map((unzipped) {
         fileData = unzipped;
         archive.dispose();
-        return const Ok();
+        return ok;
       });
     } catch (e) {
       log.d("error opening web archive $archiveFile", error: e);
@@ -321,17 +315,17 @@ class WebArchiveMangaSource
 
   @override
   AsyncOut<Uint8List> getData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  }) =>
+    String key, [
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) =>
       ensureReady.execute(signal).map((_) => fileData[key]!);
 }
 
 /// Data from files in a directory
 class DirectoryMangaSource
-    with ReadyFlagMixin<MangaSource>, FileCache
-    implements MangaSource {
+    extends MangaSource
+    with ReadyFlagMixin<MangaSource>, FileCache {
   final String directoryPath;
 
   final bool recursive;
@@ -339,6 +333,9 @@ class DirectoryMangaSource
   /// Paths of files (including directory prefix)
   @override
   List<String> files = [];
+
+  @override
+  String getFilePath(String file) => join(directoryPath, file);
 
   DirectoryMangaSource(this.directoryPath, {this.recursive = true});
 
@@ -354,13 +351,16 @@ class DirectoryMangaSource
       final path = directoryPath.toString();
       final dir = Directory(path);
       if (await dir.exists()) {
-        files = sortFiles(await listDirectory(
-          directoryPath,
+        final list = await listDirectory(
+          path,
           recursive: recursive,
-        ));
+        );
+        files = sortFiles(
+          list.map((path) => relative(path, from: directoryPath)),
+        );
       }
       // log.t("discovered ${files.length} files from $directoryPath");
-      return const Ok();
+      return ok;
     } catch (e) {
       return Err(e, signal);
     }
@@ -377,10 +377,10 @@ class DirectoryMangaSource
 
   @override
   AsyncOut<Uint8List> loadData(
-    String key,
-    AsyncSignal signal, {
-    Priority priority = Priority.low,
-  }) async {
+    String key, [
+    Priority? priority,
+    AsyncSignal? signal,
+  ]) async {
     try {
       final file =
           File(isWithin(directoryPath, key) ? key : join(directoryPath, key));

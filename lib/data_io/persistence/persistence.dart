@@ -49,7 +49,7 @@ class AppStorage with BoxStorage<AppStorage> {
             .onFail((_, signal) => Ok(AppStorage()))
             .throwErr();
     _instance!.galleryPath = null;
-    return const Ok();
+    return ok;
   }
 
   @HiveField(0)

@@ -33,6 +33,8 @@ class Async<T> implements Future<Result<T>> {
 
   T get unwrap => value.value;
 
+  T? get unwrapOrNull => value.valueOrNull;
+
   /// Note: cancel after completion is ignored
   bool get isCancelled => !isCompleted && signal.isTriggered;
 
@@ -52,7 +54,6 @@ class Async<T> implements Future<Result<T>> {
   /// Similar to Future()
   Async(FutureOr<Result<T>> Function(AsyncSignal signal) function,
       {Object? debugInfo, AsyncSignal? signal}) {
-    withInfo(debugInfo);
     this.signal = signal ?? this.signal;
     future = Future(() async {
       if (this.signal.isTriggered) {

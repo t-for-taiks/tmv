@@ -170,6 +170,19 @@ extension FutureAsyncExtension<T> on FutureOr<Result<T>> {
     }
     return result.value;
   }
+
+  Future<T?> valueOrNull() async {
+    final Result<T> result;
+    if (this is Async<T> && (this as Async).isCompleted) {
+      result = (this as Async<T>).value;
+    } else {
+      result = await this;
+    }
+    if (result is Err) {
+      return null;
+    }
+    return result.value;
+  }
 }
 
 class LimitedExecution {
