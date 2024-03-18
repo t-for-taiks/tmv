@@ -15,10 +15,9 @@ class MediaDisplay extends StatefulWidget {
   final AsyncExecutor0<FileData> dataSource;
 
   /// Signal to parent widget, resolve when image is loaded
-  final Async<void> buildComplete = Async.completer();
-
-  /// Signal to parent widget when media is loaded (+) and disposed (-)
-  final void Function(int delta) sizeUpdateCallback;
+  ///
+  /// Return the size of the image in bytes
+  final Async<int> buildComplete = Async.completer();
 
   /// Image not visible, but data is still buffered
   final bool hidden;
@@ -39,7 +38,6 @@ class MediaDisplay extends StatefulWidget {
   MediaDisplay({
     super.key,
     required this.dataSource,
-    required this.sizeUpdateCallback,
     required this.hidden,
     this.blurred = false,
     required this.showInfo,
@@ -133,8 +131,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
           await _getVideoDimensions.execute();
         }
         log.t(("schedule", "decode complete $debugInfo"));
-        widget.buildComplete.complete_();
-        widget.sizeUpdateCallback(totalSizeBytes);
+        widget.buildComplete.complete(totalSizeBytes);
         return ok;
       });
 
@@ -142,7 +139,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
   void didUpdateWidget(covariant MediaDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (loadProcess.isCompleted) {
-      widget.buildComplete.complete_();
+      widget.buildComplete.complete(totalSizeBytes);
     }
     if (videoPlayer != null) {
       if (oldWidget.hidden && !widget.hidden) {
@@ -271,9 +268,6 @@ class _MediaDisplayState extends State<MediaDisplay> {
   @override
   void dispose() {
     super.dispose();
-    if (loadProcess.isCompleted) {
-      widget.sizeUpdateCallback(-totalSizeBytes);
-    }
     loadProcess.cancel();
     videoPlayer?.dispose();
     widget.buildComplete.complete(Err("disposed"));

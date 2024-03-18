@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/data_io/file/file_selection.dart';
 import 'package:tmv/global/collection/collection.dart';
@@ -16,12 +15,12 @@ import 'package:tmv/ui/manga/media_display.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../data_io/file/file_pick.dart';
-import '../../data_io/persistence/manga_cache.dart';
-import '../../global/helper.dart';
 import '../../data_io/manga_loader.dart';
-import 'manga_scroll.dart';
+import '../../data_io/persistence/manga_cache.dart';
 import '../../data_io/persistence/persistence.dart';
 import '../../global/global.dart';
+import '../../global/helper.dart';
+import 'manga_scroll.dart';
 
 part 'manga_view.g.dart';
 
@@ -214,6 +213,9 @@ class MangaViewState extends State<MangaView>
   /// Total bytes of all loaded images in [children]
   int totalBytes = 0;
 
+  /// Record children size
+  final Map<String, int> childrenSize = {};
+
   double get fillFactor => totalBytes / defaultImageCacheSize;
 
   /// Dynamic control of preload range
@@ -344,16 +346,16 @@ class MangaViewState extends State<MangaView>
   ///
   /// Returns true if capacity available after freeing
   bool _maybeFreeCapacity() {
-    while (fillFactor > 1) {
+    while (true) {
       final entry = children.top;
       if (inPreloadRange(data!.selection.fileIndex[entry.key]!)) {
         log.t(("MangaView", "skip ${entry.key}"));
-        return false;
+        return fillFactor < 1;
       }
       log.t(("MangaView", "remove ${entry.key}"));
       children.pop();
+      totalBytes -= childrenSize.remove(entry.key)!;
     }
-    return true;
   }
 
   /// Called on [build] to update [children]
@@ -452,7 +454,6 @@ class MangaViewState extends State<MangaView>
           signal,
         );
       },
-      sizeUpdateCallback: (size) => totalBytes += size,
       hidden: hidden,
       blurred: blurred,
       debugInfo: index,
@@ -462,7 +463,13 @@ class MangaViewState extends State<MangaView>
       "MangaView",
       "build image: $index, hidden: $hidden, blurred: $blurred"
     ));
-    image.buildComplete.whenComplete(() => setState(() {}));
+    image.buildComplete.map((size) => setState(() {
+          final key = files[index];
+          if (!childrenSize.containsKey(key)) {
+            totalBytes += size;
+            childrenSize[key] = size;
+          }
+        }));
     return image;
   }
 
@@ -561,7 +568,9 @@ class MangaViewState extends State<MangaView>
                   .map((entry) => entry.value),
 
               /// build current
-              if (currentShowKey != null) children[currentShowKey!],
+              if (currentShowKey != null &&
+                  children.containsKey(currentShowKey!))
+                children[currentShowKey!],
 
               /// build debug info
               if (kDebugMode) _buildDebug(context),
