@@ -64,6 +64,9 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
   /// Get file path from a relative path (if possible)
   String? getFilePath(String file) => null;
 
+  /// Get relative path from a file path (if possible)
+  String? getRelativePath(String file) => null;
+
   /// Get data from a relative path
   AsyncOut<Uint8List> getData(
     String key, [
@@ -362,6 +365,9 @@ class DirectoryMangaSource extends MangaSource
   @override
   String getFilePath(String file) => join(directoryPath, file);
 
+  @override
+  String? getRelativePath(String file) => relative(file, from: directoryPath);
+
   DirectoryMangaSource(this.directoryPath, {this.recursive = true});
 
   @override
@@ -382,7 +388,7 @@ class DirectoryMangaSource extends MangaSource
           recursive: recursive,
         ).map((list) {
           files = sortFiles(
-            list.map((path) => relative(path, from: directoryPath)),
+            list.map((path) => getRelativePath(path)!),
           );
           return ok;
         });

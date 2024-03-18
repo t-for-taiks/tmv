@@ -70,7 +70,8 @@ class MangaViewData
       source.ensureReady.execute(signal).whenComplete(() {
         selection.fileSource = () => source.files;
         if (openedFile != null) {
-          final index = selection.fileIndex[openedFile] ?? -1;
+          final index =
+              selection.fileIndex[source.getRelativePath(openedFile!)] ?? -1;
           if (index != -1) {
             changePage(index);
           } else {
