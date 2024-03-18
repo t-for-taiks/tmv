@@ -44,11 +44,18 @@ class Storage {
   static Set<String> _dirtyObjects = {};
 
   static AsyncOut<void> init(AsyncSignal signal) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    MediaKit.ensureInitialized();
+
+    await packageInfo;
+
+    // initialize app storage
+    await AppStorage.init(signal);
+
     if (hiveDisabled) {
       return ok;
     }
-    WidgetsFlutterBinding.ensureInitialized();
-    MediaKit.ensureInitialized();
+
     await getApplicationSupportDirectory()
         .then((dir) => Hive.initFlutter(dir.path));
     await getTemporaryDirectory().then((dir) => _tempHive.init(dir.path));
@@ -70,8 +77,6 @@ class Storage {
       ..registerAdapter(FileFilterAdapter())
       ..registerAdapter(FileSorterAdapter())
       ..registerAdapter(FileSelectionAdapter());
-
-    await packageInfo;
 
     // open temp box
     _tempBox = await _tempHive.openBox(tempBoxPath);
@@ -119,8 +124,6 @@ class Storage {
       }
       return ok;
     });
-    // initialize app storage
-    await AppStorage.init(signal);
     return ok;
   }
 
@@ -210,6 +213,9 @@ class Storage {
   /// Try to load this object from disk
   static AsyncOut<T> tryLoad<T extends BoxStorage<T>>(
       String boxPath, String boxKey, AsyncSignal signal) async {
+    if (hiveDisabled) {
+      return Err(["Hive disabled", signal]);
+    }
     if (_tempBox == null) {
       return Err("Can't load in isolate");
     }

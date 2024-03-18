@@ -27,7 +27,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
   double overlayOpacity = 0;
 
   double get aspectRatio => clampDouble(
-        widget.cache.thumbnail!.width / widget.cache.thumbnail!.height,
+        widget.cache.thumbnail!.width! / widget.cache.thumbnail!.height!,
         0.5,
         1.5,
       );

@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:styled_widget/styled_widget.dart';
+import 'package:tmv/global/config.dart';
 
 import '../../data_io/file/file_selection.dart';
 import '../../global/global.dart';
@@ -13,11 +15,10 @@ class MediaDisplay extends StatefulWidget {
   final AsyncExecutor0<FileData> dataSource;
 
   /// Signal to parent widget, resolve when image is loaded
-  ///
-  /// Returns total bytes of the image when image is loaded for the first time,
-  /// otherwise resolves with 0 instantly
-  /// todo: add multi-frame gif support
-  final Async<int> buildComplete = Async.completer();
+  final Async<void> buildComplete = Async.completer();
+
+  /// Signal to parent widget when media is loaded (+) and disposed (-)
+  final void Function(int delta) sizeUpdateCallback;
 
   /// Image not visible, but data is still buffered
   final bool hidden;
@@ -38,6 +39,7 @@ class MediaDisplay extends StatefulWidget {
   MediaDisplay({
     super.key,
     required this.dataSource,
+    required this.sizeUpdateCallback,
     required this.hidden,
     this.blurred = false,
     required this.showInfo,
@@ -84,7 +86,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
   AsyncOut<void> _getImageDimensions(AsyncSignal signal) async {
     try {
       final buffer =
-          await ImmutableBuffer.fromUint8List((data as ImageData).bytes);
+          await ImmutableBuffer.fromUint8List((data as ImageMemoryData).bytes);
       final descriptor = await ImageDescriptor.encoded(buffer);
       // this is not accurate, because video is streamed from file
       totalSizeBytes =
@@ -100,7 +102,11 @@ class _MediaDisplayState extends State<MediaDisplay> {
   AsyncOut<void> _getVideoDimensions(AsyncSignal signal) {
     mediaWidth = videoPlayer!.state.width!;
     mediaHeight = videoPlayer!.state.height!;
-    totalSizeBytes = (data as VideoFileData).byteSize!;
+    // limit the number of videos to cache
+    totalSizeBytes = math.max(
+      (data as VideoFileData).byteSize!,
+      (defaultImageCacheSize / 4).floor(),
+    );
     return ok;
   }
 
@@ -121,13 +127,14 @@ class _MediaDisplayState extends State<MediaDisplay> {
         if (signal.isTriggered) {
           return Err(signal);
         }
-        if (data is ImageData) {
+        if (data is ImageMemoryData) {
           await _getImageDimensions.execute();
         } else if (data is VideoFileData) {
           await _getVideoDimensions.execute();
         }
         log.t(("schedule", "decode complete $debugInfo"));
-        widget.buildComplete.complete(totalSizeBytes);
+        widget.buildComplete.complete_();
+        widget.sizeUpdateCallback(totalSizeBytes);
         return ok;
       });
 
@@ -135,7 +142,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
   void didUpdateWidget(covariant MediaDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (loadProcess.isCompleted) {
-      widget.buildComplete.complete(0);
+      widget.buildComplete.complete_();
     }
     if (videoPlayer != null) {
       if (oldWidget.hidden && !widget.hidden) {
@@ -149,7 +156,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
 
   /// This will be called when media is requested to load, but whether it's
   /// shown is determined by [MediaDisplay.hidden]
-  Widget _buildImage(BuildContext context, ImageData data) {
+  Widget _buildImage(BuildContext context, ImageMemoryData data) {
     final image = Image(
       image: MemoryImage(data.bytes),
       frameBuilder: (context, child, frame, flag) {
@@ -245,8 +252,8 @@ class _MediaDisplayState extends State<MediaDisplay> {
       return const SizedBox.shrink();
     }
     final Widget view;
-    if (data is ImageData) {
-      view = _buildImage(context, data as ImageData);
+    if (data is ImageMemoryData) {
+      view = _buildImage(context, data as ImageMemoryData);
     } else if (data is VideoFileData) {
       view = _buildVideo(context, data as VideoFileData);
     } else {
@@ -264,6 +271,9 @@ class _MediaDisplayState extends State<MediaDisplay> {
   @override
   void dispose() {
     super.dispose();
+    if (loadProcess.isCompleted) {
+      widget.sizeUpdateCallback(-totalSizeBytes);
+    }
     loadProcess.cancel();
     videoPlayer?.dispose();
     widget.buildComplete.complete(Err("disposed"));

@@ -30,10 +30,10 @@ sealed class FileData {
   });
 }
 
-class ImageData extends FileData {
+class ImageMemoryData extends FileData {
   final Uint8List bytes;
 
-  const ImageData({
+  const ImageMemoryData({
     required this.bytes,
     super.path,
     super.additionalText,
@@ -154,7 +154,8 @@ class FileSelection {
       final shortName = name.replaceAll(RegExp(r"\w+$"), "");
       textMapping.putIfAbsent(shortName, () => []).add(file);
     }
-    textMapping.removeWhere((key, value) => value.length > 1);
+    // remove duplicates and empty keys
+    textMapping.removeWhere((key, value) => value.length > 1 && key.isNotEmpty);
     additionalTextFiles = List.unmodifiable(
       files.map((file) {
         final name = basenameWithoutExtension(file);

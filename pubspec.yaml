@@ -36,6 +36,7 @@ dependencies:
   collection: ^1.18.0
   #  cupertino_icons: ^1.0.6
   desktop_drop: ^0.4.4
+  fc_native_video_thumbnail: ^0.8.0
   file: ^7.0.0
   file_picker: ^6.1.1
   #  flutter_oss_licenses: ^2.0.1 # dart run flutter_oss_licenses:generate.dart

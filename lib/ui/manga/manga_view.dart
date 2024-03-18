@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -82,6 +83,9 @@ class MangaViewData
 
   AsyncOut<FileData> getFileData(int index,
       [Priority? priority, AsyncSignal? signal]) async {
+    if (index < 0 || index >= selection.length) {
+      return Err();
+    }
     final file = selection.files[index];
     final additionalTextFile = selection.additionalTextFiles[index];
     final String? textData;
@@ -97,7 +101,7 @@ class MangaViewData
       case ExtensionFilter.image:
         return source.getData
             .execute(file, priority, signal)
-            .map((data) => ImageData(
+            .map((data) => ImageMemoryData(
                   bytes: data,
                   path: file,
                   additionalText: textData,
@@ -347,9 +351,6 @@ class MangaViewState extends State<MangaView>
         return false;
       }
       log.t(("MangaView", "remove ${entry.key}"));
-      if (entry.data.buildComplete.isCompleted) {
-        totalBytes -= entry.data.buildComplete.unwrap;
-      }
       children.pop();
     }
     return true;
@@ -451,6 +452,7 @@ class MangaViewState extends State<MangaView>
           signal,
         );
       },
+      sizeUpdateCallback: (size) => totalBytes += size,
       hidden: hidden,
       blurred: blurred,
       debugInfo: index,
@@ -460,18 +462,7 @@ class MangaViewState extends State<MangaView>
       "MangaView",
       "build image: $index, hidden: $hidden, blurred: $blurred"
     ));
-    image.buildComplete.map((size) {
-      if (size != 0) {
-        totalBytes += size;
-        log.t((
-          "MangaView",
-          "image $index loaded, totalBytes: ${kb(totalBytes)}"
-        ));
-      } else {
-        log.t(("MangaView", "image $index already loaded"));
-      }
-      setState(() {});
-    });
+    image.buildComplete.whenComplete(() => setState(() {}));
     return image;
   }
 
@@ -516,6 +507,33 @@ class MangaViewState extends State<MangaView>
     );
   }
 
+  Widget _buildDebug(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        "fillFactor: ${fillFactor.toStringAsFixed(2)}",
+        "current page: ${data!.currentPage}",
+        "total entries loaded: ${children.length}",
+        "preloadMultiplier: ${preloadMultiplier.toStringAsFixed(2)}",
+        "preloadRange: $preloadLower - $preloadUpper",
+        "totalBytes: ${kb(totalBytes)}",
+      ]
+          .map(
+            (text) => Text(
+              text,
+              textAlign: TextAlign.left,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          )
+          .toList(),
+    )
+        .backgroundBlur(16)
+        .backgroundColor(Theme.of(context).colorScheme.surface.withOpacity(0.7))
+        .clipRRect(all: 8)
+        .padding(all: 8);
+  }
+
   Widget _buildContent(BuildContext context) {
     if (data == null) {
       return _buildDefaultMessage(context, "No file opened.");
@@ -536,8 +554,11 @@ class MangaViewState extends State<MangaView>
       child: Row(
         children: [
           Stack(
-            children: [...children],
-          ).expanded(),
+            children: [
+              ...children,
+              if (kDebugMode) _buildDebug(context),
+            ],
+          ).height(double.infinity).expanded(),
           Column(
             children: [
               VerticalMangaScroll(

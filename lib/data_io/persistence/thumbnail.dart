@@ -1,38 +1,48 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:math' as math;
+import 'dart:ui';
 
+import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../global/global.dart';
 import '../../global/async/isolate_worker.dart';
+import '../file/file_selection.dart';
 
 part 'thumbnail.g.dart';
 
+/// Used to calculate thumbnail size for images (total pixel)
 const int thumbnailSize = 200000;
+
+/// Used as thumbnail size for videos
+const int thumbnailPreferredDimension = 500;
 
 const int thumbnailIsolateCount = 4;
 
 /// Only images larger than this size will be processed to thumbnail
 const int minimumByteSizeToCreateThumbnail = 1024; // 512KB
 
-typedef _PIM = PriorityIsolatePoolManager<int, Uint8List, ThumbnailInfo>;
+typedef _PIM = PriorityIsolatePoolManager<int, FileData, ThumbnailInfo>;
 
 @HiveType(typeId: 7)
 class ThumbnailInfo {
   @HiveField(0)
   final Uint8List data;
   @HiveField(1)
-  final int width;
+  int? width;
   @HiveField(2)
-  final int height;
+  int? height;
 
-  const ThumbnailInfo({
+  ThumbnailInfo({
     required this.data,
-    required this.width,
-    required this.height,
+    this.width,
+    this.height,
   });
 
   factory ThumbnailInfo.empty() => ThumbnailInfo(
@@ -40,6 +50,20 @@ class ThumbnailInfo {
         width: 100,
         height: 100,
       );
+
+  /// In case width and height are not provided
+  AsyncOut<void> readDimensions() {
+    if (width != null && height != null) {
+      return ok;
+    }
+    return ImmutableBuffer.fromUint8List(data)
+        .then(ImageDescriptor.encoded)
+        .then((descriptor) {
+      width = descriptor.width;
+      height = descriptor.height;
+      return ok;
+    });
+  }
 
   bool get isEmpty => data.isEmpty;
 }
@@ -69,10 +93,10 @@ class ThumbnailProcessor {
       });
 
   /// Process an image to thumbnail
-  static AsyncOut<ThumbnailInfo> process(Uint8List input, AsyncSignal signal) =>
+  static AsyncOut<ThumbnailInfo> process(FileData file, AsyncSignal signal) =>
       _maybeInitialize().then((manager) => manager.processWithPriority(
             _generateKey(),
-            input,
+            file,
             0,
             signal,
           ));
@@ -92,13 +116,10 @@ class ThumbnailProcessor {
 // }
 }
 
-class ThumbnailWorker extends IsolateWorker<Uint8List, ThumbnailInfo> {
-  @override
-  FutureOr<Result<ThumbnailInfo>> process(Uint8List input) {
-    log.t(("Thumbnail", "Start processing data (${kb(input.lengthInBytes)})"));
-
+class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
+  Result<ThumbnailInfo> _processImage(Uint8List data) {
     /// todo: decode is taking too long (for dart native library)
-    final image = decodeImage(input, frame: 0);
+    final image = decodeImage(data, frame: 0);
     if (image == null) {
       log.d(("Thumbnail", "Failed to decode image"));
       return Err("Failed to decode image");
@@ -125,5 +146,47 @@ class ThumbnailWorker extends IsolateWorker<Uint8List, ThumbnailInfo> {
       "Complete processing thumbnail (${width}x$height, ${kb(thumbnail.lengthInBytes)})"
     ));
     return Ok(ThumbnailInfo(data: thumbnail, width: width, height: height));
+  }
+
+  Future<Result<ThumbnailInfo>> _processVideo(String source) async {
+    final tempPath =
+        await getTemporaryDirectory().then((d) => join(d.path, uuid.v4()));
+    return FcNativeVideoThumbnail()
+        .getVideoThumbnail(
+      srcFile: source,
+      destFile: tempPath,
+      width: thumbnailPreferredDimension,
+      height: thumbnailPreferredDimension,
+      keepAspectRatio: true,
+      format: "jpeg",
+      quality: 80,
+    )
+        .then((v) {
+      return v;
+    }).then((success) async {
+      if (!success) {
+        return Err("Failed to create thumbnail");
+      }
+      // there's a bug in flutter so we can't generate descriptor in isolate
+      final thumbnailData = File(tempPath).readAsBytesSync();
+      // final buffer = await ImmutableBuffer.fromUint8List(thumbnailData);
+      // final descriptor = await ImageDescriptor.encoded(buffer);
+      return Ok(ThumbnailInfo(
+        data: thumbnailData,
+        // width: descriptor.width,
+        // height: descriptor.height,
+      ));
+    });
+  }
+
+  @override
+  AsyncOut<ThumbnailInfo> process(FileData input) {
+    log.t(("Thumbnail", "Start processing data (${kb(input.byteSize)})"));
+    switch (input) {
+      case ImageMemoryData _:
+        return _processImage(input.bytes);
+      case VideoFileData _:
+        return _processVideo(input.tempPath);
+    }
   }
 }

@@ -122,19 +122,14 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       .handleError((error) => Err(error))
       .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
 
-  AsyncOut<ThumbnailInfo> _loadThumbnail(AsyncSignal signal) async {
-    if (viewData!.selection.files.isEmpty) {
-      return Err("No file found");
-    }
-    return await viewData!.selection.files
-        .take(4)
-        .map((file) => (signal) => source.getData
-            .execute(file, Priority.high, signal)
-            .chain(ThumbnailProcessor.process))
-        .executeOrdered(signal)
-        .first
-        .catchError((error) => Err(error));
-  }
+  AsyncOut<ThumbnailInfo> _loadThumbnail(AsyncSignal signal) => List.generate(
+        4,
+        (index) => viewData!.getFileData
+            .bind(index, Priority.high)
+            .chain(ThumbnailProcessor.process),
+      )
+          .executeOrdered(signal)
+          .firstWhere(Result.isOk, orElse: () => Err("Can't create thumbnail"));
 
   @override
   AsyncOut<void> getReady(AsyncSignal signal) async {
@@ -162,6 +157,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
             .execute(signal)
             // throw here if no file is found
             .throwErr();
+        await thumbnail!.readDimensions().throwErr();
         markAsDirty();
       }
       log.t((

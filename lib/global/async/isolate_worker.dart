@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/services.dart';
 import 'package:tmv/global/collection/collection.dart';
 
 import '../global.dart';
@@ -152,7 +154,7 @@ class IsolateManager<In, Out> {
     try {
       await Isolate.spawn(
         _startRemoteIsolate<W, In, Out>,
-        (initPort.sendPort, workerCreator),
+        (initPort.sendPort, workerCreator, RootIsolateToken.instance!),
       );
     } on Object {
       initPort.close();
@@ -187,11 +189,13 @@ class IsolateManager<In, Out> {
   }
 
   static void _startRemoteIsolate<W extends IsolateWorker<IN, OUT>, IN, OUT>(
-    (SendPort, FutureOr<W> Function() workerCreator) message,
+    (SendPort, FutureOr<W> Function(), RootIsolateToken) message,
   ) async {
-    final (sendPort, workerCreator) = message;
+    final (sendPort, workerCreator, rootToken) = message;
     final receivePort = ReceivePort();
     sendPort.send(receivePort.sendPort);
+
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootToken);
 
     // create isolate environment
     final worker = await workerCreator();

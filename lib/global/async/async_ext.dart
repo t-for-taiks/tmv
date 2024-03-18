@@ -41,6 +41,10 @@ extension AsyncExecution<Out> on AsyncExecutor0<Out> {
     async.signal = signal ?? async.signal;
     return async;
   }
+
+  /// Chain the function with another function (but not executing yet)
+  AsyncExecutor0<X> chain<X>(AsyncExecutor1<Out, X> function) =>
+      (signal) => execute(signal).chain(function);
 }
 
 extension AsyncExecution1<In1, Out> on AsyncExecutor1<In1, Out> {
