@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart';
@@ -13,8 +11,8 @@ import 'package:image_size_getter/image_size_getter.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../global/global.dart';
 import '../../global/async/isolate_worker.dart';
+import '../../global/global.dart';
 import '../file/file_selection.dart';
 
 part 'thumbnail.g.dart';
@@ -187,7 +185,7 @@ class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
           width: size.width,
           height: size.height,
         ));
-      } on UnsupportedError catch (e) {
+      } on UnsupportedError {
         // if format is not supported, leave the size getting to main isolate
         return Ok(ThumbnailInfo(data: thumbnailData));
       }

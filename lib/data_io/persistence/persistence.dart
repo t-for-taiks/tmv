@@ -5,6 +5,7 @@ import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../global/global.dart';
 import 'hive.dart';
+
 export 'hive.dart';
 
 part 'persistence.g.dart';

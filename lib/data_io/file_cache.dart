@@ -28,7 +28,7 @@ abstract mixin class FileCache {
   /// Load data into memory
   @protected
   AsyncOut<Uint8List> loadData(
-    String key,[
+    String key, [
     Priority? priority,
     AsyncSignal? signal,
   ]);
@@ -54,7 +54,7 @@ abstract mixin class FileCache {
   /// [priority] default to highest priority
   @nonVirtual
   AsyncOut<Uint8List> getData(
-    String key,[
+    String key, [
     Priority? priority,
     AsyncSignal? signal,
   ]) async {
@@ -85,7 +85,7 @@ mixin DisabledFileCache implements FileCache {
   /// Now directly call [loadData]
   @override
   AsyncOut<Uint8List> getData(
-    String key,[
+    String key, [
     Priority? priority,
     AsyncSignal? signal,
   ]) =>

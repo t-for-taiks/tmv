@@ -5,13 +5,10 @@ import 'package:flutter/foundation.dart';
 
 import '../log.dart';
 
-part 'result.dart';
-
 part 'async_ext.dart';
-
 part 'async_signal.dart';
-
 part 'isolate_run.dart';
+part 'result.dart';
 
 /// Get the caller of the current function outside of this library
 String _getCaller() {

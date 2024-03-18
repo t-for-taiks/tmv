@@ -3,17 +3,17 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/src/hive_impl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:hive/src/hive_impl.dart';
 
-import 'manga_cache.dart';
-import 'persistence.dart';
-import 'thumbnail.dart';
 import '../../global/global.dart';
 import '../../ui/manga/manga_view.dart';
 import '../file/file_selection.dart';
 import '../manga_loader.dart';
+import 'manga_cache.dart';
+import 'persistence.dart';
+import 'thumbnail.dart';
 
 export 'package:hive_flutter/hive_flutter.dart';
 

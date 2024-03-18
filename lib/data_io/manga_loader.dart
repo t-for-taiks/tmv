@@ -10,10 +10,10 @@ import 'package:tmv/global/async/isolate_worker.dart';
 import '../global/archive.dart';
 import '../global/config.dart';
 import '../global/global.dart';
-import 'file_cache.dart';
+import '../global/helper.dart';
 import 'file/file_io.dart';
 import 'file/filename_sort.dart';
-import '../global/helper.dart';
+import 'file_cache.dart';
 
 /// Exception to be thrown if the source file is missing
 class MangaSourceInvalidException implements Exception {

@@ -9,8 +9,9 @@ import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../global/global.dart';
 import 'file_filter.dart';
-export 'file_filter.dart';
 import 'filename_sort.dart';
+
+export 'file_filter.dart';
 export 'filename_sort.dart';
 
 part 'file_selection.g.dart';

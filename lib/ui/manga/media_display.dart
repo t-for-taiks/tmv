@@ -191,17 +191,6 @@ class _MediaDisplayState extends State<MediaDisplay> {
     return Video(controller: videoController!);
   }
 
-  Widget _buildBlurMask(BuildContext context, Widget child) {
-    if (!widget.blurred || !loadProcess.isCompleted) {
-      return child;
-    }
-    return ImageFiltered(
-      key: UniqueKey(),
-      imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: child,
-    ).aspectRatio(aspectRatio: aspectRatio).clipRect().center();
-  }
-
   Widget _buildAdditionalText(BuildContext context) {
     if (!loadProcess.isCompleted) {
       return const SizedBox.shrink();

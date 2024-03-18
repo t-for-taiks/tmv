@@ -6,7 +6,7 @@ import 'package:collection/collection.dart';
 class UniquePriority<Key, Data> {
   /// Queue that tracks both key and priority
   final queue = PriorityQueue<(Key, Comparable)>(
-        (left, right) => Comparable.compare(left.$2, right.$2),
+    (left, right) => Comparable.compare(left.$2, right.$2),
   );
 
   /// Record data

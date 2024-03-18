@@ -33,8 +33,7 @@ class _MyHomePageState extends State<MyHomePage> {
   DrawerViewState? get drawer => drawerKey.currentState as DrawerViewState?;
 
   AsyncOut<void> _applyData(MangaViewData? data, [AsyncSignal? signal]) async =>
-      await mangaViewKey.currentState?.setData.execute(data, signal) ??
-      ok;
+      await mangaViewKey.currentState?.setData.execute(data, signal) ?? ok;
 
   @override
   void initState() {

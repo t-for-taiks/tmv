@@ -7,10 +7,9 @@ import "package:uuid/uuid.dart";
 
 import "async/async.dart";
 
-export "log.dart";
-
 export "async/async.dart";
 export "async/ready_flag.dart";
+export "log.dart";
 
 const uuid = Uuid();
 
