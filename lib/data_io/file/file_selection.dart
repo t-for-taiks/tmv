@@ -156,7 +156,7 @@ class FileSelection {
       textMapping.putIfAbsent(shortName, () => []).add(file);
     }
     // remove duplicates and empty keys
-    textMapping.removeWhere((key, value) => value.length > 1 && key.isEmpty);
+    textMapping.removeWhere((key, value) => value.length > 1 || key.isEmpty);
     additionalTextFiles = List.unmodifiable(
       files.map((file) {
         final name = basenameWithoutExtension(file);
