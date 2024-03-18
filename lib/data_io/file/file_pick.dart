@@ -48,6 +48,7 @@ AsyncOut<MangaViewData> pickAndOpenFile(AsyncSignal signal) async {
   final result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
     allowedExtensions: ExtensionFilter.media.allowedExtensions
+        .followedBy(ExtensionFilter.archive.allowedExtensions)
         .map((s) => s.substring(1))
         .toList(),
     allowMultiple: true,
