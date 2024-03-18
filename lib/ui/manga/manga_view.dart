@@ -81,6 +81,8 @@ class MangaViewData
             log.t(("MangaView", "File not found: $openedFile"));
           }
           openedFile = null;
+        } else if (currentPage >= selection.length - 1) {
+          changePage(0);
         }
       });
 
@@ -142,6 +144,7 @@ class MangaViewData
 
   @override
   void release() {
+    print("release ${source.identifier}");
     super.release();
     selection.dispose();
   }
@@ -187,13 +190,14 @@ class MangaViewState extends State<MangaView>
   MangaViewData? data;
 
   AsyncOut<void> setData(MangaViewData? value, AsyncSignal signal) async {
-    notifyListeners(data);
+    notifyListeners(value);
     if (data == value) {
       if (data == null) {
         return ok;
       }
       return await data!.ensureReady.execute(signal);
     }
+    data?.release();
     data = value;
     release();
     setState(() {});
@@ -259,30 +263,30 @@ class MangaViewState extends State<MangaView>
   ContextMenu _buildContextMenu(BuildContext context) {
     return ContextMenu(
       entries: [
-          MenuItem(
-            label: 'Set as Manga Cover',
-            icon: Icons.image_outlined,
-            onSelected: () async {
-              if (data!.source.path == null) {
-                showDefaultDialog(
-                  context: context,
-                  child: const Text("No path available"),
-                );
-                return;
-              }
-              final thumbnail = data!.getFileData
-                  .execute(data!.currentPage, Priority.high)
-                  .chain(ThumbnailProcessor.process);
-              final cache =
-                  MangaCache.createFromIdentifier.execute(source.identifier);
-              await Future.wait([thumbnail, cache]);
-              if (thumbnail.isSuccessful && cache.isSuccessful) {
-                cache.unwrap.thumbnail = thumbnail.unwrap;
-                cache.unwrap.ensureReady.execute();
-                cache.unwrap.markAsDirty();
-              }
-            },
-          ),
+        MenuItem(
+          label: 'Set as Manga Cover',
+          icon: Icons.image_outlined,
+          onSelected: () async {
+            if (data!.source.path == null) {
+              showDefaultDialog(
+                context: context,
+                child: const Text("No path available"),
+              );
+              return;
+            }
+            final thumbnail = data!.getFileData
+                .execute(data!.currentPage, Priority.high)
+                .chain(ThumbnailProcessor.process);
+            final cache =
+                MangaCache.createFromIdentifier.execute(source.identifier);
+            await Future.wait([thumbnail, cache]);
+            if (thumbnail.isSuccessful && cache.isSuccessful) {
+              cache.unwrap.thumbnail = thumbnail.unwrap;
+              cache.unwrap.ensureReady.execute();
+              cache.unwrap.markAsDirty();
+            }
+          },
+        ),
       ],
     );
   }
