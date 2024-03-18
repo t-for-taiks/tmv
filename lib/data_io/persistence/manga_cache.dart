@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
+import 'package:tmv/data_io/file/file_filter.dart';
 import 'package:tmv/data_io/persistence/thumbnail.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
@@ -79,6 +80,10 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   @HiveField(4)
   Map<String, dynamic>? info;
 
+  /// Whether the source contains sub folders or archives
+  @HiveField(5)
+  late final bool containsSub;
+
   Searchable? searchableText;
 
   bool loadedFromStorage;
@@ -95,6 +100,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
     required this.viewData,
     required this.length,
     required this.info,
+    required this.containsSub,
   }) : loadedFromStorage = true {
     boxKey = source.identifier;
   }
@@ -114,7 +120,9 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       .map((path) => source.getData.bind(path, null))
       .executeOrdered(signal)
       .map((result) {
-        log.t("${result.valueOrNull?.length.toKb}");
+        if (result is Ok) {
+          log.t(("MangaCache", "read text ${result.value.length.toKb}"));
+        }
         return result;
       })
       .where(Result.isOk)
@@ -143,6 +151,14 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       ));
       stopwatch.reset();
 
+      // Currently, only sub-dirs from directory sources are supported
+      if (source is DirectoryMangaSource) {
+        containsSub = source.files.any((path) =>
+            path.contains(separator) || ExtensionFilter.archive.test(path));
+      } else {
+        containsSub = false;
+      }
+
       info = await _loadInfo.execute(signal).throwErr();
       log.t((
         "MangaCache",
@@ -155,7 +171,11 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
         await viewData!.ensureReady.execute(signal);
         thumbnail = await _loadThumbnail
             .execute(signal)
-            // throw here if no file is found
+            // in case there's no thumbnail generated
+            // if there's a sub-dir, use an empty thumbnail
+            .onFail((value, signal) =>
+                containsSub ? Ok(ThumbnailInfo.empty()) : value)
+            // otherwise, throw error
             .throwErr();
         await thumbnail!.readDimensions().throwErr();
         markAsDirty();

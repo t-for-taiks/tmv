@@ -290,11 +290,16 @@ class _SelectViewState extends State<SelectView> {
       }
     }
     // list directory
-    final dirEntries = await listDirectory(
+    final listResult = await listDirectory(
       AppStorage.instance.galleryPath!,
+      signal,
       includeDirectory: true,
       recursive: false,
     );
+    if (listResult.failed) {
+      return listResult;
+    }
+    final dirEntries = listResult.value;
     signal.setProgress(
       total: dirEntries.length.toDouble(),
       progressFormatter: () => "${signal.current.toInt()}/${dirEntries.length}",

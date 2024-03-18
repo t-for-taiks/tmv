@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart';
 import 'package:image_size_getter/image_size_getter.dart';
@@ -50,6 +51,15 @@ class ThumbnailInfo {
         data: Uint8List(0),
         width: 100,
         height: 100,
+      );
+
+  /// Empty thumbnail for folder
+  static Future<ThumbnailInfo> folder() async => ThumbnailInfo(
+        data: await rootBundle
+            .load("assets/images/image_placeholder_no_preview.webp")
+            .then((b) => b.buffer.asUint8List()),
+        width: 640,
+        height: 640,
       );
 
   /// In case width and height are not provided

@@ -50,7 +50,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
         entries: [
           // const MenuHeader(text: "Context Menu"),
           MenuItem(
-            label: 'Open Item',
+            label: 'Open as Manga',
             icon: Icons.file_open_outlined,
             onSelected: () {
               widget.openMangaCallback();
@@ -175,11 +175,20 @@ class _AlbumEntryState extends State<AlbumEntry> {
 
               /// Click callback, send signal to open selected manga
               child: GestureDetector(
-                onTap: widget.openMangaCallback,
+                onTap: () {
+                  if (widget.cache.containsSub) {
+                    widget.openGalleryCallback();
+                  } else {
+                    widget.openMangaCallback();
+                  }
+                },
 
                 /// Animate overlay
                 child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: overlayOpacity),
+                  tween: Tween(
+                      begin: 0,
+                      end:
+                          widget.cache.thumbnail!.isEmpty ? 1 : overlayOpacity),
                   duration: const Duration(milliseconds: 200),
                   builder: (context, value, child) => Stack(
                     children: [

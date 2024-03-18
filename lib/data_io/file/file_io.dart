@@ -11,25 +11,27 @@ import '../../global/global.dart';
 /// Limit size to parse yaml to 10MB
 const yamlSizeLimit = 10 * 1024 * 1024;
 
-Future<List<String>> listDirectory(
-  String directoryPath, {
+AsyncOut<List<String>> listDirectory(
+  String directoryPath,
+  AsyncSignal signal, {
   bool Function(String)? condition,
   bool includeDirectory = false,
   bool recursive = true,
 }) =>
-    isolateRunSimple(
-      () async => await Directory(directoryPath)
-          .list(recursive: recursive)
-          .handleError((_) {}) // Ignore files that can't be accessed
-          .map((file) => file.path)
-          .where(
-            (path) =>
-                (condition?.call(path) ?? true) &&
-                (includeDirectory || FileSystemEntity.isFileSync(path)),
-          )
-          .take(fileCountLimit)
-          .toList(),
-    );
+    isolateRun(
+        () => Directory(directoryPath)
+            .list(recursive: recursive)
+            .handleError((_) {}) // Ignore files that can't be accessed
+            .map((file) => file.path)
+            .where(
+              (path) =>
+                  (condition?.call(path) ?? true) &&
+                  (includeDirectory || FileSystemEntity.isFileSync(path)),
+            )
+            .take(fileCountLimit)
+            .toList()
+            .asOk,
+        signal);
 
 AsyncOut<List<Uint8List>> readFiles(List<String> files, AsyncSignal signal) =>
     isolateRun(
@@ -37,7 +39,9 @@ AsyncOut<List<Uint8List>> readFiles(List<String> files, AsyncSignal signal) =>
       signal,
     );
 
-AsyncOut<Map<Key, Value>> parseYaml<Key, Value>(Uint8List bytes, AsyncSignal signal) => isolateRun(
+AsyncOut<Map<Key, Value>> parseYaml<Key, Value>(
+        Uint8List bytes, AsyncSignal signal) =>
+    isolateRun(
       () {
         if (bytes.length > yamlSizeLimit) {
           return Err("File too large");

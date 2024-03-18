@@ -73,8 +73,6 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
 
   void dispose();
 
-
-
   @override
   bool operator ==(Object other) {
     if (other is MangaSource) {
@@ -378,16 +376,18 @@ class DirectoryMangaSource extends MangaSource
       final path = directoryPath.toString();
       final dir = Directory(path);
       if (await dir.exists()) {
-        final list = await listDirectory(
+        return listDirectory(
           path,
+          signal,
           recursive: recursive,
-        );
-        files = sortFiles(
-          list.map((path) => relative(path, from: directoryPath)),
-        );
+        ).map((list) {
+          files = sortFiles(
+            list.map((path) => relative(path, from: directoryPath)),
+          );
+          return ok;
+        });
       }
-      // log.t("discovered ${files.length} files from $directoryPath");
-      return ok;
+      return Err("Directory not found");
     } catch (e) {
       return Err(e, signal);
     }

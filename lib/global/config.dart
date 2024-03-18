@@ -15,7 +15,7 @@ const defaultTitle = "тaıкs' manga vıewer";
 const infoFileReadLimit = 8192;
 
 /// Maximum number of images opened
-const fileCountLimit = 8192;
+const fileCountLimit = 1024;
 
 /// Minimum preload previous pages as decoded bitmap
 const forcedPreloadRangeLower = 1;
