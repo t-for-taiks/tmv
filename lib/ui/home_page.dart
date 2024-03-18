@@ -59,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
               key: GlobalObjectKey(this),
               maxWidth: width,
               maxHeight: height,
-              clickCallback: (cache) {
+              openMangaCallback: (cache) {
                 drawerControl(DrawerControlSignal.closeIfNotPinned);
                 _applyData(cache.viewData);
               },

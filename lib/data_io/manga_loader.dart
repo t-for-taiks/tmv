@@ -48,6 +48,19 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
 
   int get length => 0;
 
+  String? get path {
+    switch (this) {
+      case NullMangaSource _:
+        return null;
+      case ArchiveMangaSource source:
+        return source.archivePath;
+      case WebArchiveMangaSource _:
+        return null;
+      case DirectoryMangaSource source:
+        return source.directoryPath;
+    }
+  }
+
   /// Get file path from a relative path (if possible)
   String? getFilePath(String file) => null;
 
@@ -59,6 +72,8 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
   ]);
 
   void dispose();
+
+
 
   @override
   bool operator ==(Object other) {

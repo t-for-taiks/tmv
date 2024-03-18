@@ -1,6 +1,6 @@
 part of 'async.dart';
 
-typedef ProgressCallback = void Function(double current, double total);
+typedef ProgressCallback = void Function(AsyncSignal signal);
 
 /// Object passed to every [Async] call, providing more features
 /// - interrupt an Async
@@ -57,7 +57,7 @@ class AsyncSignal {
     this.progressLabel = progressLabel ?? this.progressLabel;
     _progressFormatter = progressFormatter ?? _progressFormatter;
     for (final callback in progressCallbackList) {
-      callback(this.current, this.total);
+      callback(this);
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:path/path.dart';
 import 'package:styled_widget/styled_widget.dart';
 import '../../data_io/file/file_selection.dart';
 import '../../data_io/file/file_io.dart';
@@ -20,13 +21,13 @@ class SelectView extends StatefulWidget {
   final double maxWidth;
   final double maxHeight;
 
-  final void Function(MangaCache) clickCallback;
+  final void Function(MangaCache) openMangaCallback;
 
   final Widget Function(BuildContext) pinButtonBuilder;
 
   const SelectView({
     super.key,
-    required this.clickCallback,
+    required this.openMangaCallback,
     required this.maxWidth,
     required this.maxHeight,
     required this.pinButtonBuilder,
@@ -78,6 +79,13 @@ class _SelectViewState extends State<SelectView> {
     _filteredList = mangaList;
   }
 
+  Future<void> _applyPath(String? galleryPath) async {
+    AppStorage.instance.galleryPath = galleryPath;
+    await release();
+    loadGalleryProcess = load.execute();
+    loadGalleryProcess!.signal.progressCallbackList.add((_) => setState(() {}));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,7 +108,7 @@ class _SelectViewState extends State<SelectView> {
     super.didUpdateWidget(oldWidget);
 
     /// If unsorted, sort when hidden
-    if (!oldWidget.hidden && widget.hidden && searchQuery.isEmpty) {
+    if (!oldWidget.hidden && widget.hidden) {
       clearSearchMaybeSort();
     }
   }
@@ -155,6 +163,16 @@ class _SelectViewState extends State<SelectView> {
             children: [
               const SizedBox(width: 4),
 
+              /// "Parent folder" button
+              IconButton(
+                icon: const Icon(Icons.arrow_upward_rounded),
+                onPressed: widget.hidden ||
+                        AppStorage.instance.galleryPath == null
+                    ? null
+                    : () =>
+                        _applyPath(dirname(AppStorage.instance.galleryPath!)),
+              ),
+
               /// "Open folder" button
               IconButton(
                 icon: const Icon(Icons.create_new_folder_outlined),
@@ -166,10 +184,7 @@ class _SelectViewState extends State<SelectView> {
                         );
                         if (path != null &&
                             path != AppStorage.instance.galleryPath) {
-                          AppStorage.instance.galleryPath = path;
-                          await release();
-                          loadGalleryProcess = load.execute();
-                          setState(() {});
+                          await _applyPath(path);
                         }
                       },
               ),
@@ -199,10 +214,7 @@ class _SelectViewState extends State<SelectView> {
                 ).toList(),
                 onChanged: (path) async {
                   if (path != AppStorage.instance.galleryPath) {
-                    AppStorage.instance.galleryPath = path;
-                    await release();
-                    loadGalleryProcess = load.execute();
-                    setState(() {});
+                    await _applyPath(path);
                   }
                 },
               ).expanded(),
@@ -240,8 +252,14 @@ class _SelectViewState extends State<SelectView> {
               itemCount: filteredList.length,
               itemBuilder: (context, index) => AlbumEntry(
                   cache: filteredList[index],
-                  clickCallback: () =>
-                      widget.clickCallback(filteredList[index])),
+                  openMangaCallback: () =>
+                      widget.openMangaCallback(filteredList[index]),
+                  openGalleryCallback: () {
+                    _applyPath(
+                      (filteredList[index].source as DirectoryMangaSource)
+                          .directoryPath,
+                    );
+                  }),
             ) as Widget)
                 .padding(right: 2),
             if (loadGalleryProcess?.isCompleted != true)
@@ -279,6 +297,7 @@ class _SelectViewState extends State<SelectView> {
     );
     signal.setProgress(
       total: dirEntries.length.toDouble(),
+      progressFormatter: () => "${signal.current.toInt()}/${dirEntries.length}",
     );
     if (signal.isTriggered) {
       return Err(signal);

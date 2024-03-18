@@ -8,6 +8,25 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'drawer.dart';
 
+Future<T?> showDefaultDialog<T>({
+  required BuildContext context,
+  required Widget child,
+}) =>
+    showDialog(
+      context: context,
+      builder: (context) => child
+          .scrollable()
+          .padding(all: 16)
+          .backgroundBlur(12)
+          .backgroundColor(
+            Theme.of(context).colorScheme.surface.withOpacity(0.8),
+          )
+          .clipRRect(all: 8)
+          .constrained(maxWidth: 600)
+          .padding(vertical: 80)
+          .center(),
+    );
+
 /// About drawer
 Widget buildAbout(
   BuildContext context,
@@ -75,24 +94,14 @@ Widget buildAbout(
             final license =
                 await rootBundle.loadString("assets/fonts/LICENSE.txt");
             if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => Text(
-                  license
-                      .replaceAll(RegExp(r"[\x00-\x08\x0E-\x1F]"), "")
-                      .trim(),
-                  style: Theme.of(context).textTheme.bodySmall,
-                )
-                    .scrollable()
-                    .padding(all: 16)
-                    .backgroundBlur(12)
-                    .backgroundColor(
-                        Theme.of(context).colorScheme.surface.withOpacity(0.8))
-                    .clipRRect(all: 8)
-                    .constrained(maxWidth: 600)
-                    .padding(vertical: 80)
-                    .center(),
-              );
+              showDefaultDialog(
+                  context: context,
+                  child: Text(
+                    license
+                        .replaceAll(RegExp(r"[\x00-\x08\x0E-\x1F]"), "")
+                        .trim(),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ));
             }
           },
         ),

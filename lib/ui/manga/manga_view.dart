@@ -585,7 +585,10 @@ class MangaViewState extends State<MangaView>
               ),
             ],
           ).backgroundColor(
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            Color.alphaBlend(
+              Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+              Theme.of(context).colorScheme.surfaceContainer,
+            ),
           ),
         ],
       ),

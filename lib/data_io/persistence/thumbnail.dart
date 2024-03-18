@@ -8,6 +8,7 @@ import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart';
+import 'package:image_size_getter/image_size_getter.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -167,15 +168,19 @@ class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
       if (!success) {
         return Err("Failed to create thumbnail");
       }
-      // there's a bug in flutter so we can't generate descriptor in isolate
+      // we can't generate descriptor in isolate
       final thumbnailData = File(tempPath).readAsBytesSync();
-      // final buffer = await ImmutableBuffer.fromUint8List(thumbnailData);
-      // final descriptor = await ImageDescriptor.encoded(buffer);
-      return Ok(ThumbnailInfo(
-        data: thumbnailData,
-        // width: descriptor.width,
-        // height: descriptor.height,
-      ));
+      try {
+        final size = ImageSizeGetter.getSize(MemoryInput(thumbnailData));
+        return Ok(ThumbnailInfo(
+          data: thumbnailData,
+          width: size.width,
+          height: size.height,
+        ));
+      } on UnsupportedError catch (e) {
+        // if format is not supported, leave the size getting to main isolate
+        return Ok(ThumbnailInfo(data: thumbnailData));
+      }
     });
   }
 

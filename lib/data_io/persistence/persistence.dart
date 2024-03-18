@@ -49,10 +49,7 @@ class AppStorage with BoxStorage<AppStorage> {
         await Storage.tryLoad<AppStorage>.execute(_boxPath, _boxKey, signal)
             .logFail("?")
             .onFail((_, signal) => Ok(AppStorage()))
-            .then((value) {
-      print(value.value);
-      return value;
-    }).throwErr();
+            .throwErr();
     _instance!.galleryPath = null;
     return ok;
   }
