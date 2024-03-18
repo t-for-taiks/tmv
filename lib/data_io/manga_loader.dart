@@ -164,7 +164,10 @@ class ArchiveMangaSource extends MangaSource
   final String archivePath;
 
   /// A seperated Isolate will handle file read and decompression
-  PriorityIsolatePoolManager<String, String, Uint8List>? decompressIsolate;
+  ///
+  /// todo: make isolate pool instead of giving each file a new isolate
+  PriorityIsolatePoolManager<String?, String?, (Uint8List?, List<String>?)>?
+      decompressIsolate;
 
   /// Paths of files inside archive
   @override
@@ -191,12 +194,14 @@ class ArchiveMangaSource extends MangaSource
         if (data != null) {
           return Ok(data![key]!);
         }
-        return await decompressIsolate!.processWithPriority.execute(
-          key,
-          key,
-          priority ?? Priority.low,
-          signal,
-        );
+        return await decompressIsolate!.processWithPriority
+            .execute(
+              key,
+              key,
+              priority ?? Priority.low,
+              signal,
+            )
+            .map((result) => result.$1!);
       });
 
   /// Initialize by decompressing all data
@@ -228,14 +233,13 @@ class ArchiveMangaSource extends MangaSource
   /// Parse file list from archive
   @override
   AsyncOut getReady(AsyncSignal signal) async {
+    final stopwatch = Stopwatch()..start();
+    log.t(("MangaSource", "loading archive $archivePath"));
     try {
       files = await listArchiveFile(archivePath, signal).throwErr();
     } catch (e) {
       log.d("error opening archive $archivePath", error: e);
       return Err(e, signal);
-    }
-    if (signal.isTriggered) {
-      return Err(signal);
     }
     decompressIsolate = PriorityIsolatePoolManager();
     await decompressIsolate!.createIsolates(
@@ -243,7 +247,16 @@ class ArchiveMangaSource extends MangaSource
       ArchiveDecompressWorker.makeConstructor(archivePath),
       signal,
     );
-    // log.t("discovered ${files.length} files from $archivePath");
+    log.t((
+      "MangaSource",
+      "Created decompress isolate in ${stopwatch.elapsed}",
+    ));
+    stopwatch.reset();
+    files = await decompressIsolate!
+        .processWithPriority(null, null, Priority.high, signal)
+        .map((result) => result.$2!)
+        .throwErr();
+    log.t(("MangaSource", "Listed $archivePath in ${stopwatch.elapsed}"));
     return ok;
   }
 
@@ -323,8 +336,7 @@ class WebArchiveMangaSource extends MangaSource
 }
 
 /// Data from files in a directory
-class DirectoryMangaSource
-    extends MangaSource
+class DirectoryMangaSource extends MangaSource
     with ReadyFlagMixin<MangaSource>, FileCache {
   final String directoryPath;
 

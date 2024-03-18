@@ -12,7 +12,8 @@ import 'global.dart';
 /// on one archive
 ///
 /// All methods are run in an Isolate
-class ArchiveDecompressWorker implements IsolateWorker<String, Uint8List> {
+class ArchiveDecompressWorker
+    implements IsolateWorker<String?, (Uint8List?, List<String>?)> {
   final String archivePath;
 
   /// Opened socket
@@ -34,8 +35,16 @@ class ArchiveDecompressWorker implements IsolateWorker<String, Uint8List> {
   /// Input: file name
   ///
   /// Output: decompressed data
+  ///
+  /// Return archive list if input is null
   @override
-  Result<Uint8List> process(String input) {
+  Result<(Uint8List?, List<String>?)> process(String? input) {
+    if (input == null) {
+      return Ok((
+        null,
+        archive.files.map((file) => file.name).toList()..sortedNames(),
+      ));
+    }
     final file = archive.findFile(input);
     if (file == null) {
       // log.w("file not found: $input");
@@ -52,7 +61,7 @@ class ArchiveDecompressWorker implements IsolateWorker<String, Uint8List> {
     final data = file.content as Uint8List;
     // free the copy of data
     file.clear();
-    return Ok(data);
+    return Ok((data, null));
   }
 
   @override

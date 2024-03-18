@@ -113,6 +113,10 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       .take(metaInfoQueryLimit)
       .map((path) => source.getData.bind(path, null))
       .executeOrdered(signal)
+      .map((result) {
+        log.t("${result.valueOrNull?.length.toKb}");
+        return result;
+      })
       .where(Result.isOk)
       .asyncMap((result) => parseYaml<String, dynamic>(result.value, signal))
       .handleError((error) => Err(error))
@@ -134,11 +138,22 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
 
   @override
   AsyncOut<void> getReady(AsyncSignal signal) async {
+    final stopwatch = Stopwatch()..start();
     if (!loadedFromStorage) {
       await source.ensureReady.execute(signal);
       length = source.length;
+      log.t((
+        "MangaCache",
+        "MangaSource.getReady ${source.identifier} in ${stopwatch.elapsed}",
+      ));
+      stopwatch.reset();
 
       info = await _loadInfo.execute(signal).throwErr();
+      log.t((
+        "MangaCache",
+        "MangaCache._loadInfo ${source.identifier} in ${stopwatch.elapsed}",
+      ));
+      stopwatch.reset();
       if (thumbnail == null) {
         viewData ??= MangaViewData(source);
         viewData!.cache = this;
@@ -149,9 +164,16 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
             .throwErr();
         markAsDirty();
       }
+      log.t((
+        "MangaCache",
+        "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
+      ));
+      stopwatch.reset();
       source.release();
     }
     searchableText = Searchable(title + info.toString());
+    log.d("Searchable done ${source.identifier} in ${stopwatch.elapsed}");
+    stopwatch.reset();
     return ok;
   }
 

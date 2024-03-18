@@ -36,7 +36,7 @@ class Log extends Logger {
   Log._()
       : super(
           // printer: PrettyPrinter(printTime: true),
-          printer: PrettyPrinter(methodCount: 10, noBoxingByDefault: false),
+          printer: PrettyPrinter(methodCount: 1, noBoxingByDefault: false),
           filter: MyLogFilter(),
           level: Level.trace,
         );
