@@ -20,7 +20,7 @@ AsyncOut<MangaViewData> tryOpen(List<String> paths, AsyncSignal signal) async {
     throw UnimplementedError();
   }
   final path = paths[0];
-  return await MangaSource.fromPath(path, signal)
+  return await MangaSource.fromPath(path, true, signal)
       .map((source) => MangaViewData(source, openedFile: path));
 }
 

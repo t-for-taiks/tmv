@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart';
 import 'package:yaml/yaml.dart';
 
 import '../../global/config.dart';
@@ -11,11 +12,32 @@ import '../../global/global.dart';
 /// Limit size to parse yaml to 10MB
 const yamlSizeLimit = 10 * 1024 * 1024;
 
-AsyncOut<List<String>> listDirectory(
+sealed class ListedInfo {
+  final String parentPath;
+
+  final String relativePath;
+
+  final String fullPath;
+
+  ListedInfo({
+    required this.fullPath,
+    required this.parentPath,
+  }) : relativePath = relative(fullPath, from: parentPath);
+}
+
+class ListedFileInfo extends ListedInfo {
+  ListedFileInfo({required super.fullPath, required super.parentPath});
+}
+
+class ListedDirectoryInfo extends ListedInfo {
+  ListedDirectoryInfo({required super.fullPath, required super.parentPath});
+}
+
+AsyncOut<List<ListedInfo>> listDirectory(
   String directoryPath,
   AsyncSignal signal, {
   bool Function(String)? condition,
-  bool includeDirectory = false,
+  bool includeDirectory = true,
   bool recursive = true,
 }) =>
     isolateRun(
@@ -23,11 +45,25 @@ AsyncOut<List<String>> listDirectory(
             .list(recursive: recursive)
             .handleError((_) {}) // Ignore files that can't be accessed
             .map((file) => file.path)
-            .where(
-              (path) =>
-                  (condition?.call(path) ?? true) &&
-                  (includeDirectory || FileSystemEntity.isFileSync(path)),
-            )
+            .where((path) => (condition?.call(path) ?? true))
+            .map<Result<ListedInfo>>((path) {
+              if (FileSystemEntity.isFileSync(path)) {
+                return Ok(ListedFileInfo(
+                  fullPath: path,
+                  parentPath: directoryPath,
+                ));
+              } else if (FileSystemEntity.isDirectorySync(path) &&
+                  includeDirectory) {
+                return Ok(ListedDirectoryInfo(
+                  fullPath: path,
+                  parentPath: directoryPath,
+                ));
+              } else {
+                return Err("Not a file or directory");
+              }
+            })
+            .where(Result.isOk)
+            .map((result) => result.value)
             .take(fileCountLimit)
             .toList()
             .asOk,

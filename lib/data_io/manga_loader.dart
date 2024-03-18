@@ -48,6 +48,8 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
 
   int get length => 0;
 
+  bool get containsSub => false;
+
   String? get path {
     switch (this) {
       case NullMangaSource _:
@@ -88,19 +90,21 @@ sealed class MangaSource with ReadyFlagMixin<MangaSource> {
   int get hashCode => identifier.hashCode;
 
   static AsyncOut<MangaSource> fromPath(
-    String path,
-    AsyncSignal signal,
-  ) async {
+    String path, [
+    bool? recursive,
+    AsyncSignal? signal,
+  ]) async {
     if (await FileSystemEntity.isFile(path)) {
       if (ExtensionFilter.archive.test(path)) {
         return Ok(ArchiveMangaSource(path));
       } else if (ExtensionFilter.media.test(path)) {
-        return Ok(DirectoryMangaSource(dirname(path)));
+        return Ok(
+            DirectoryMangaSource(dirname(path), recursive: recursive ?? false));
       } else {
         return Err("Unsupported file format");
       }
     } else if (await FileSystemEntity.isDirectory(path)) {
-      return Ok(DirectoryMangaSource(path));
+      return Ok(DirectoryMangaSource(path, recursive: recursive ?? true));
     } else {
       return Err("Not a file: $path");
     }
@@ -358,6 +362,9 @@ class DirectoryMangaSource extends MangaSource
 
   final bool recursive;
 
+  @override
+  bool containsSub = false;
+
   /// Paths of files (including directory prefix)
   @override
   List<String> files = [];
@@ -387,9 +394,10 @@ class DirectoryMangaSource extends MangaSource
           signal,
           recursive: recursive,
         ).map((list) {
-          files = sortFiles(
-            list.map((path) => getRelativePath(path)!),
-          );
+          files = sortFiles(list.map((info) => info.relativePath));
+          containsSub = list.any((info) =>
+              info is ListedDirectoryInfo ||
+              ExtensionFilter.archive.test(info.fullPath));
           return ok;
         });
       }

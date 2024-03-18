@@ -152,12 +152,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       stopwatch.reset();
 
       // Currently, only sub-dirs from directory sources are supported
-      if (source is DirectoryMangaSource) {
-        containsSub = source.files.any((path) =>
-            path.contains(separator) || ExtensionFilter.archive.test(path));
-      } else {
-        containsSub = false;
-      }
+      containsSub = source.containsSub;
 
       info = await _loadInfo.execute(signal).throwErr();
       log.t((

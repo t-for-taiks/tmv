@@ -299,7 +299,7 @@ class _SelectViewState extends State<SelectView> {
     if (listResult.failed) {
       return listResult;
     }
-    final dirEntries = listResult.value;
+    final dirEntries = listResult.value.map((info) => info.fullPath);
     signal.setProgress(
       total: dirEntries.length.toDouble(),
       progressFormatter: () => "${signal.current.toInt()}/${dirEntries.length}",
@@ -310,11 +310,11 @@ class _SelectViewState extends State<SelectView> {
     // build MangaSource (detect archive files and directories, skip media)
     final sources =
         (await Future.wait(dirEntries.whereNot(ExtensionFilter.media.test).map(
-                  (path) =>
-                      MangaSource.fromPath(path, signal).asFuture.whenComplete(
-                            () =>
-                                signal.setProgress(current: signal.current + 1),
-                          ),
+                  (path) => MangaSource.fromPath(path, false, signal)
+                      .asFuture
+                      .whenComplete(
+                        () => signal.setProgress(current: signal.current + 1),
+                      ),
                 )))
             .where(Result.isOk)
             .map((e) => e.value)
