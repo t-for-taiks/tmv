@@ -49,6 +49,9 @@ class PriorityPool<Key, Data> extends Iterable<Data> {
 
   Iterable<Data> get values => _map.values.map((e) => e.data);
 
+  Iterable<MapEntry<Key, Data>> get entries =>
+      _map.entries.map((e) => MapEntry(e.key, e.value.data));
+
   @override
   Iterator<Data> get iterator => _map.entries.map((e) => e.value.data).iterator;
 

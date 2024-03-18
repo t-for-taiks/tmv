@@ -555,7 +555,15 @@ class MangaViewState extends State<MangaView>
         children: [
           Stack(
             children: [
-              ...children,
+              /// build all non-current behind
+              ...children.entries
+                  .where((entry) => entry.key != currentShowKey)
+                  .map((entry) => entry.value),
+
+              /// build current
+              if (currentShowKey != null) children[currentShowKey!],
+
+              /// build debug info
               if (kDebugMode) _buildDebug(context),
             ],
           ).height(double.infinity).expanded(),
