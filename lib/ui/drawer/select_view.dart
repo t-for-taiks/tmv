@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:path/path.dart';
 import 'package:styled_widget/styled_widget.dart';
-import '../../data_io/file/file_selection.dart';
+
 import '../../data_io/file/file_io.dart';
+import '../../data_io/file/file_selection.dart';
 import '../../data_io/manga_loader.dart';
 import '../../data_io/persistence/manga_cache.dart';
-
 import '../../data_io/persistence/persistence.dart';
 import '../../global/global.dart';
 import 'album_entry.dart';
@@ -325,6 +325,9 @@ class _SelectViewState extends State<SelectView> {
       current: 0,
       total: sources.length.toDouble(),
     );
+    if (signal.isTriggered) {
+      return Err(signal);
+    }
     // sort by name
     sources.sortByCompare(
       (source) => getRunesForSort(source.userShortName),

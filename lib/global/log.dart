@@ -24,9 +24,10 @@ class MyLogFilter extends DevelopmentFilter {
       "isolate",
       "schedule",
       "FileCache",
+      "MangaSource",
+      "MangaView",
       "MangaCache",
       "Thumbnail",
-      "MangaView",
       "album",
     ].none((s) => category.startsWith(s.toLowerCase()));
   }
