@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../global/global.dart';
 import 'hive.dart';
@@ -46,8 +47,12 @@ class AppStorage with BoxStorage<AppStorage> {
   static AsyncOut<void> init(AsyncSignal signal) async {
     _instance =
         await Storage.tryLoad<AppStorage>.execute(_boxPath, _boxKey, signal)
+            .logFail("?")
             .onFail((_, signal) => Ok(AppStorage()))
-            .throwErr();
+            .then((value) {
+      print(value.value);
+      return value;
+    }).throwErr();
     _instance!.galleryPath = null;
     return ok;
   }
@@ -66,6 +71,14 @@ class AppStorage with BoxStorage<AppStorage> {
     ];
     markAsDirty();
   }
+
+  Object toJsonObject() => {
+        "_": runtimeType.toString(),
+        "galleryHistory": galleryHistory,
+      };
+
+  @override
+  String toString() => YamlWriter().write(toJsonObject());
 
   AppStorage();
 }

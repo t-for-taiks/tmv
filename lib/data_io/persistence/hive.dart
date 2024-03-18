@@ -49,81 +49,80 @@ class Storage {
 
     await packageInfo;
 
+    if (!hiveDisabled) {
+      await getApplicationSupportDirectory()
+          .then((dir) => Hive.initFlutter(dir.path));
+      await getTemporaryDirectory().then((dir) => _tempHive.init(dir.path));
+      Hive
+        ..registerAdapter(AppStorageAdapter())
+        ..registerAdapter(MangaSourceAdapter())
+        ..registerAdapter(MangaViewDataAdapter())
+        ..registerAdapter(MangaCacheAdapter())
+        ..registerAdapter(ThumbnailInfoAdapter())
+        ..registerAdapter(FileFilterAdapter())
+        ..registerAdapter(FileSorterAdapter())
+        ..registerAdapter(FileSelectionAdapter());
+      _tempHive
+        ..registerAdapter(AppStorageAdapter())
+        ..registerAdapter(MangaSourceAdapter())
+        ..registerAdapter(MangaViewDataAdapter())
+        ..registerAdapter(MangaCacheAdapter())
+        ..registerAdapter(ThumbnailInfoAdapter())
+        ..registerAdapter(FileFilterAdapter())
+        ..registerAdapter(FileSorterAdapter())
+        ..registerAdapter(FileSelectionAdapter());
+
+      // open temp box
+      _tempBox = await _tempHive.openBox(tempBoxPath);
+      // start auto save thread
+      _autoSaveThread = Async((signal) async {
+        while (!signal.isTriggered) {
+          // save every 10 seconds, or when signaled
+          await Future.any([
+            Future.delayed(const Duration(seconds: 10)),
+            signal.future,
+          ]);
+          // create a map of boxPath to objects
+          final objects = _dirtyObjects
+              .map((key) => _tempBox!.get(key) as BoxStorage)
+              .toList();
+          final boxMap = <String, List<BoxStorage>>{};
+          for (final obj in objects) {
+            boxMap.putIfAbsent(obj.boxPath!, () => []).add(obj);
+          }
+          // save each box (if saved, return [], else return unsaved objects)
+          final unsavedObjects = await boxMap.entries
+              .map(
+                (entry) => (signal) => withBox<List<BoxStorage>>.execute(
+                        entry.key, (box, _) async {
+                      for (final obj in entry.value) {
+                        log.t(("persistence", "saving ${obj.tempKey}: $obj"));
+                        await box.put(obj.boxKey, obj);
+                      }
+                      return const Ok(<BoxStorage>[]);
+                    }).onFail(
+                      (err, _) {
+                        log.w((
+                          "persistence",
+                          "failed to save box ${entry.key}: $err"
+                        ));
+                        return Ok(entry.value);
+                      },
+                    ),
+              )
+              // not checking for signal here, because the signal may have been triggered
+              .executeLimited()
+              .expand((e) => e.value)
+              .toList();
+          _dirtyObjects = unsavedObjects.map((e) => e.tempKey).toSet();
+        }
+        return ok;
+      });
+    }
+
     // initialize app storage
     await AppStorage.init(signal);
 
-    if (hiveDisabled) {
-      return ok;
-    }
-
-    await getApplicationSupportDirectory()
-        .then((dir) => Hive.initFlutter(dir.path));
-    await getTemporaryDirectory().then((dir) => _tempHive.init(dir.path));
-    Hive
-      ..registerAdapter(AppStorageAdapter())
-      ..registerAdapter(MangaSourceAdapter())
-      ..registerAdapter(MangaViewDataAdapter())
-      ..registerAdapter(MangaCacheAdapter())
-      ..registerAdapter(ThumbnailInfoAdapter())
-      ..registerAdapter(FileFilterAdapter())
-      ..registerAdapter(FileSorterAdapter())
-      ..registerAdapter(FileSelectionAdapter());
-    _tempHive
-      ..registerAdapter(AppStorageAdapter())
-      ..registerAdapter(MangaSourceAdapter())
-      ..registerAdapter(MangaViewDataAdapter())
-      ..registerAdapter(MangaCacheAdapter())
-      ..registerAdapter(ThumbnailInfoAdapter())
-      ..registerAdapter(FileFilterAdapter())
-      ..registerAdapter(FileSorterAdapter())
-      ..registerAdapter(FileSelectionAdapter());
-
-    // open temp box
-    _tempBox = await _tempHive.openBox(tempBoxPath);
-    // start auto save thread
-    _autoSaveThread = Async((signal) async {
-      while (!signal.isTriggered) {
-        // save every 10 seconds, or when signaled
-        await Future.any([
-          Future.delayed(const Duration(seconds: 10)),
-          signal.future,
-        ]);
-        // create a map of boxPath to objects
-        final objects = _dirtyObjects
-            .map((key) => _tempBox!.get(key) as BoxStorage)
-            .toList();
-        final boxMap = <String, List<BoxStorage>>{};
-        for (final obj in objects) {
-          boxMap.putIfAbsent(obj.boxPath!, () => []).add(obj);
-        }
-        // save each box (if saved, return [], else return unsaved objects)
-        final unsavedObjects = await boxMap.entries
-            .map(
-              (entry) => (signal) =>
-                  withBox<List<BoxStorage>>.execute(entry.key, (box, _) async {
-                    for (final obj in entry.value) {
-                      log.t(("persistence", "saving ${obj.tempKey}: $obj"));
-                      await box.put(obj.boxKey, obj);
-                    }
-                    return const Ok(<BoxStorage>[]);
-                  }).onFail(
-                    (err, _) {
-                      log.w((
-                        "persistence",
-                        "failed to save box ${entry.key}: $err"
-                      ));
-                      return Ok(entry.value);
-                    },
-                  ),
-            )
-            // not checking for signal here, because the signal may have been triggered
-            .executeLimited()
-            .expand((e) => e.value)
-            .toList();
-        _dirtyObjects = unsavedObjects.map((e) => e.tempKey).toSet();
-      }
-      return ok;
-    });
     return ok;
   }
 

@@ -24,6 +24,13 @@ class AsyncSignal {
 
   String get percentage => "${(ratio * 100).toStringAsFixed(0)}%";
 
+  String progressLabel = "";
+
+  String Function()? _progressFormatter;
+
+  String Function() get progressFormatter =>
+      _progressFormatter ?? () => percentage;
+
   AsyncSignal({this.debugInfo}) {
     debugInfo ??= _getCaller();
   }
@@ -39,9 +46,16 @@ class AsyncSignal {
   }
 
   /// Update progress
-  void setProgress({double? current, double? total}) {
+  void setProgress({
+    double? current,
+    double? total,
+    String? progressLabel,
+    String Function()? progressFormatter,
+  }) {
     this.current = current ?? this.current;
     this.total = total ?? this.total;
+    this.progressLabel = progressLabel ?? this.progressLabel;
+    _progressFormatter = progressFormatter ?? _progressFormatter;
     for (final callback in progressCallbackList) {
       callback(this.current, this.total);
     }

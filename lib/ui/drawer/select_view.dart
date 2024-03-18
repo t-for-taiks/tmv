@@ -53,17 +53,9 @@ class _SelectViewState extends State<SelectView> {
     if (_filteredList != null) {
       return _filteredList!;
     }
-
     if (searchQuery.isEmpty) {
-      // sort only once after load gallery is done
-      if (loadGalleryProcess?.isCompleted == true && !_mangaListFinalSorted) {
-        _mangaListFinalSorted = true;
-        mangaList.sortByCompare(
-          (manga) => getRunesForSort(manga.title),
-          stringRunesCompare,
-        );
-      }
-      return _filteredList = mangaList;
+      clearSearchMaybeSort();
+      return _filteredList!;
     }
 
     final queryList =
@@ -73,16 +65,30 @@ class _SelectViewState extends State<SelectView> {
         .toList();
   }
 
+  /// Sort only once after load gallery is done
+  void clearSearchMaybeSort() {
+    if (loadGalleryProcess?.isCompleted == true && !_mangaListFinalSorted) {
+      _mangaListFinalSorted = true;
+      mangaList.sortByCompare(
+        (manga) => getRunesForSort(manga.title),
+        stringRunesCompare,
+      );
+    }
+    searchQuery = "";
+    _filteredList = mangaList;
+  }
+
   @override
   void initState() {
     super.initState();
     loadGalleryProcess = load.execute();
   }
 
-  Future<void> cancelLoad() async {
+  Future<void> release() async {
     if (loadGalleryProcess?.isCompleted == false) {
       await loadGalleryProcess!.cancel();
     }
+    _mangaListFinalSorted = false;
     loadGalleryProcess = null;
     mangaList.clear();
     searchQuery = "";
@@ -92,6 +98,11 @@ class _SelectViewState extends State<SelectView> {
   @override
   void didUpdateWidget(covariant SelectView oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    /// If unsorted, sort when hidden
+    if (!oldWidget.hidden && widget.hidden && searchQuery.isEmpty) {
+      clearSearchMaybeSort();
+    }
   }
 
   @override
@@ -100,6 +111,37 @@ class _SelectViewState extends State<SelectView> {
       return const SizedBox.shrink();
     }
     return buildView(context, widget.maxWidth, widget.maxHeight);
+  }
+
+  Widget _buildLoadingIndicator(BuildContext context) {
+    final progressLabel = loadGalleryProcess!.signal.progressLabel;
+    final formattedProgress = loadGalleryProcess!.signal.progressFormatter();
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 8),
+            if (progressLabel.isNotEmpty)
+              Text(
+                progressLabel,
+                style: Theme.of(context).textTheme.labelSmall,
+                textAlign: TextAlign.center,
+              ),
+            if (formattedProgress.isNotEmpty)
+              Text(
+                formattedProgress,
+                style: Theme.of(context).textTheme.labelSmall,
+                textAlign: TextAlign.center,
+              ),
+          ],
+        ).padding(horizontal: 16, top: 16, bottom: 12),
+      ),
+    ).clipRRect(all: 8).center();
   }
 
   Widget buildView(BuildContext context, double width, double height) {
@@ -125,7 +167,7 @@ class _SelectViewState extends State<SelectView> {
                         if (path != null &&
                             path != AppStorage.instance.galleryPath) {
                           AppStorage.instance.galleryPath = path;
-                          await cancelLoad();
+                          await release();
                           loadGalleryProcess = load.execute();
                           setState(() {});
                         }
@@ -158,7 +200,7 @@ class _SelectViewState extends State<SelectView> {
                 onChanged: (path) async {
                   if (path != AppStorage.instance.galleryPath) {
                     AppStorage.instance.galleryPath = path;
-                    await cancelLoad();
+                    await release();
                     loadGalleryProcess = load.execute();
                     setState(() {});
                   }
@@ -203,25 +245,7 @@ class _SelectViewState extends State<SelectView> {
             ) as Widget)
                 .padding(right: 2),
             if (loadGalleryProcess?.isCompleted != true)
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: ColoredBox(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 8),
-                      Text(
-                        "${loadGalleryProcess?.signal.percentage}",
-                        style: Theme.of(context).textTheme.labelSmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ).padding(horizontal: 16, top: 16, bottom: 12),
-                ),
-              ).clipRRect(all: 8).center(),
+              _buildLoadingIndicator(context),
           ]).expanded(),
         ],
       ).clipRect(),
@@ -232,9 +256,20 @@ class _SelectViewState extends State<SelectView> {
     if (AppStorage.instance.galleryPath == null) {
       return ok;
     }
+    signal.setProgress(
+      progressLabel: "Listing",
+      progressFormatter: () => "",
+      current: 0,
+    );
     // wait for 2 seconds when hidden
     if (widget.hidden) {
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.any([
+        Future.delayed(const Duration(seconds: 2)),
+        signal.future,
+      ]);
+      if (signal.isTriggered) {
+        return Err(signal);
+      }
     }
     // list directory
     final dirEntries = await listDirectory(
@@ -242,22 +277,42 @@ class _SelectViewState extends State<SelectView> {
       includeDirectory: true,
       recursive: false,
     );
+    signal.setProgress(
+      total: dirEntries.length.toDouble(),
+    );
     if (signal.isTriggered) {
       return Err(signal);
     }
-    // build MangaSource (detect files and directories)
-    final sources = (await Future.wait(dirEntries.map(
-      (path) => MangaSource.fromPath(path, signal).asFuture,
-    )))
-        .where(Result.isOk)
-        .map((e) => e.value)
-        .toList();
-    signal.setProgress(current: 0, total: sources.length.toDouble());
+    // build MangaSource (detect archive files and directories, skip media)
+    final sources =
+        (await Future.wait(dirEntries.whereNot(ExtensionFilter.media.test).map(
+                  (path) =>
+                      MangaSource.fromPath(path, signal).asFuture.whenComplete(
+                            () =>
+                                signal.setProgress(current: signal.current + 1),
+                          ),
+                )))
+            .where(Result.isOk)
+            .map((e) => e.value)
+            .toList();
+    signal.setProgress(
+      progressLabel: "Loading",
+      progressFormatter: () => "${signal.current.toInt()}/${sources.length}",
+      current: 0,
+      total: sources.length.toDouble(),
+    );
     // sort by name
     sources.sortByCompare(
       (source) => getRunesForSort(source.userShortName),
       stringRunesCompare,
     );
+    // If there are media files on root directory, make a "." instead
+    if (dirEntries.any(ExtensionFilter.media.test)) {
+      sources.add(DirectoryMangaSource(
+        AppStorage.instance.galleryPath!,
+        recursive: false,
+      ));
+    }
     // build MangaCache and call getReady
     final cacheStream = sources
         .map((source) => (signal) => MangaCache.createFromIdentifier

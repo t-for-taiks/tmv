@@ -168,7 +168,10 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       source.release();
     }
     searchableText = Searchable(title + info.toString());
-    log.d("Searchable done ${source.identifier} in ${stopwatch.elapsed}");
+    log.t((
+      "MangaCache",
+      "Searchable done ${source.identifier} in ${stopwatch.elapsed}",
+    ));
     stopwatch.reset();
     return ok;
   }
