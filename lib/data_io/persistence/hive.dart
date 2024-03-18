@@ -5,10 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:tmv/data_io/persistence/manga_cache.dart';
-import 'package:tmv/data_io/persistence/persistence.dart';
-import 'package:tmv/data_io/persistence/thumbnail.dart';
+import 'package:hive/src/hive_impl.dart';
 
+import 'manga_cache.dart';
+import 'persistence.dart';
+import 'thumbnail.dart';
 import '../../global/global.dart';
 import '../../ui/manga/manga_view.dart';
 import '../file/file_selection.dart';
@@ -18,6 +19,9 @@ export 'package:hive_flutter/hive_flutter.dart';
 
 /// If not supported or otherwise inaccessible, this will disable hive storage
 const bool hiveDisabled = kIsWeb;
+
+/// Storage for temporary objects
+final _tempHive = HiveImpl();
 
 class Storage {
   /// Periodically save all objects
@@ -45,22 +49,32 @@ class Storage {
     }
     WidgetsFlutterBinding.ensureInitialized();
     MediaKit.ensureInitialized();
-    final dir = await getApplicationSupportDirectory();
-    log.d(("persistence", "Storage dir: $dir"));
-    await Hive.initFlutter(dir.path);
-    Hive.registerAdapter(AppStorageAdapter());
-    Hive.registerAdapter(MangaSourceAdapter());
-    Hive.registerAdapter(MangaViewDataAdapter());
-    Hive.registerAdapter(MangaCacheAdapter());
-    Hive.registerAdapter(ThumbnailInfoAdapter());
-    Hive.registerAdapter(FileFilterAdapter());
-    Hive.registerAdapter(FileSorterAdapter());
-    Hive.registerAdapter(FileSelectionAdapter());
+    await getApplicationSupportDirectory()
+        .then((dir) => Hive.initFlutter(dir.path));
+    await getTemporaryDirectory().then((dir) => _tempHive.init(dir.path));
+    Hive
+      ..registerAdapter(AppStorageAdapter())
+      ..registerAdapter(MangaSourceAdapter())
+      ..registerAdapter(MangaViewDataAdapter())
+      ..registerAdapter(MangaCacheAdapter())
+      ..registerAdapter(ThumbnailInfoAdapter())
+      ..registerAdapter(FileFilterAdapter())
+      ..registerAdapter(FileSorterAdapter())
+      ..registerAdapter(FileSelectionAdapter());
+    _tempHive
+      ..registerAdapter(AppStorageAdapter())
+      ..registerAdapter(MangaSourceAdapter())
+      ..registerAdapter(MangaViewDataAdapter())
+      ..registerAdapter(MangaCacheAdapter())
+      ..registerAdapter(ThumbnailInfoAdapter())
+      ..registerAdapter(FileFilterAdapter())
+      ..registerAdapter(FileSorterAdapter())
+      ..registerAdapter(FileSelectionAdapter());
 
     await packageInfo;
 
     // open temp box
-    _tempBox = await tryOpenBox.execute(tempBoxPath).throwErr();
+    _tempBox = await _tempHive.openBox(tempBoxPath);
     // start auto save thread
     _autoSaveThread = Async((signal) async {
       while (!signal.isTriggered) {
