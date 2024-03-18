@@ -1,6 +1,6 @@
 # тaıкs' manga vıewer
 
-Lightweight🪶 Blazing-Fast⚡ image explorer on multiple platforms.
+⚡️Blazing-Fast 🏄Fluent 🪶Lightweight. The perfect image explorer for manga/comic/gallery/etc.
 
 ![Screenshot](./screenshot.png)
 
@@ -17,8 +17,8 @@ Lightweight🪶 Blazing-Fast⚡ image explorer on multiple platforms.
 
 ### Format support
   - [x] 🖼️ **Major image formats (jpg, png, gif, webp, etc.)**
-  - [x] 💼 **Archives (**cbz**, zip, etc.)**
-  - [ ] 🎥 _Video support (planned)_
+  - [x] 💼 **Archives (cbz, zip, etc.)**
+  - [x] 🎥 **Video (h264, hevc, avi, mov, etc.)**
 
 ### Platform Support
 
