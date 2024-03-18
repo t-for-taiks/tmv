@@ -225,9 +225,20 @@ class MangaViewState extends State<MangaView>
 
   int get preloadLower => (preloadMultiplier * forcedPreloadRangeLower).floor();
 
+  int preloadStartIndex = 0;
+
+  int preloadEndIndex = -1;
+
+  void _updatePreloadRange() {
+    final current = data!.currentPage;
+    preloadStartIndex =
+        math.max(0, math.min(current, length - preloadUpper) - preloadLower);
+    preloadEndIndex =
+        math.min(length - 1, math.max(current, preloadLower) + preloadUpper);
+  }
+
   bool inPreloadRange(int index) =>
-      index >= data!.currentPage - preloadLower &&
-      index <= data!.currentPage + preloadUpper;
+      index >= preloadStartIndex && index <= preloadEndIndex;
 
   @override
   void initState() {
@@ -300,21 +311,20 @@ class MangaViewState extends State<MangaView>
   /// (part of [_updateChildren])
   int? _indexToPreload() {
     final current = data!.currentPage;
-    for (int i = 1;
-        i <= math.min(length, math.max(preloadLower, preloadUpper));
-        i += 1) {
-      if (i <= preloadUpper &&
-          current + i < length &&
+    _updatePreloadRange();
+    for (int i = 1;; i += 1) {
+      if (inPreloadRange(current + i) &&
           !children.containsKey(files[current + i])) {
         return current + i;
       }
-      if (i <= preloadLower &&
-          current - i >= 0 &&
+      if (inPreloadRange(current - i) &&
           !children.containsKey(files[current - i])) {
         return current - i;
       }
+      if (current + i > preloadEndIndex && current - i < preloadStartIndex) {
+        return null;
+      }
     }
-    return null;
   }
 
   /// Reduce preload range if memory load is heavy
@@ -346,6 +356,7 @@ class MangaViewState extends State<MangaView>
   ///
   /// Returns true if capacity available after freeing
   bool _maybeFreeCapacity() {
+    _updatePreloadRange();
     while (true) {
       final entry = children.top;
       if (inPreloadRange(data!.selection.fileIndex[entry.key]!)) {
@@ -382,6 +393,8 @@ class MangaViewState extends State<MangaView>
             ));
       }
       return;
+    } else if (!children[currentKey].isLoaded) {
+      return;
     }
 
     /// Check if any image is not loaded. This is performed before changing
@@ -412,11 +425,18 @@ class MangaViewState extends State<MangaView>
       log.t(("MangaView", "cache full"));
 
       /// Update priority for existing images
-      for (final key in children.keys.toList()) {
+      for (final key in children.keys) {
         // Images far from current page are given lower priority
         children.updatePriority(
           key,
           _computePriority(fileIndex[key]!),
+        );
+      }
+      // currently showing page should not be freed
+      if (currentShowKey != null && children.containsKey(currentShowKey!)) {
+        children.updatePriority(
+          currentShowKey!,
+          0,
         );
       }
       // free up capacity and reduce preload range if necessary

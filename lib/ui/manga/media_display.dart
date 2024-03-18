@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -139,7 +139,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
   void didUpdateWidget(covariant MediaDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (loadProcess.isCompleted) {
-      widget.buildComplete.complete(totalSizeBytes);
+      widget.buildComplete.complete(Err());
     }
     if (videoPlayer != null) {
       if (oldWidget.hidden && !widget.hidden) {
@@ -206,7 +206,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
     if (!loadProcess.isCompleted) {
       return const SizedBox.shrink();
     }
-    return BackdropFilter(
+    final view = BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
       child: ColoredBox(
         color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
@@ -240,7 +240,19 @@ class _MediaDisplayState extends State<MediaDisplay> {
           ],
         ).padding(all: 8).constrained(maxWidth: 200),
       ),
-    ).clipRRect(all: 8).positioned(bottom: 16, right: 16);
+    );
+    return Positioned(
+      bottom: 16,
+      right: 16,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: widget.blurred
+            ? ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: view)
+            : view,
+      ),
+    );
   }
 
   @override
@@ -258,9 +270,15 @@ class _MediaDisplayState extends State<MediaDisplay> {
     }
     return Stack(
       children: [
-        _buildBlurMask(context, view),
-        if (!widget.blurred && !widget.hidden && widget.showInfo)
-          _buildAdditionalText(context),
+        if (!widget.blurred || !loadProcess.isCompleted)
+          view
+        else
+          ImageFiltered(
+            key: UniqueKey(),
+            imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: view,
+          ).aspectRatio(aspectRatio: aspectRatio).clipRect().center(),
+        if (!widget.hidden && widget.showInfo) _buildAdditionalText(context),
       ],
     );
   }
