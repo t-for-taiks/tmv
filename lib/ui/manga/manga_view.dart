@@ -141,7 +141,6 @@ class MangaViewData
 
   @override
   void release() {
-    print("release ${source.identifier}");
     super.release();
     selection.dispose();
   }
@@ -479,6 +478,7 @@ class MangaViewState extends State<MangaView>
           signal,
         );
       },
+      source: source,
       hidden: hidden,
       blurred: blurred,
       debugInfo: index,

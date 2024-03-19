@@ -3,9 +3,12 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_context_menu/flutter_context_menu.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:styled_widget/styled_widget.dart';
+import 'package:tmv/data_io/manga_loader.dart';
+import 'package:tmv/data_io/persistence/thumbnail.dart';
 import 'package:tmv/global/config.dart';
 
 import '../../data_io/file/file_selection.dart';
@@ -13,6 +16,8 @@ import '../../global/global.dart';
 
 class MediaDisplay extends StatefulWidget {
   final AsyncExecutor0<FileData> dataSource;
+
+  final MangaSource source;
 
   /// Signal to parent widget, resolve when image is loaded
   ///
@@ -38,6 +43,7 @@ class MediaDisplay extends StatefulWidget {
   MediaDisplay({
     super.key,
     required this.dataSource,
+    required this.source,
     required this.hidden,
     this.blurred = false,
     required this.showInfo,
@@ -244,60 +250,57 @@ class _MediaDisplayState extends State<MediaDisplay> {
     );
   }
 
-
-  // ContextMenu _buildContextMenu(BuildContext context) {
-  //   return ContextMenu(
-  //     entries: [
-  //       MenuItem(
-  //         label: 'Set as Manga Cover',
-  //         icon: Icons.image_outlined,
-  //         onSelected: () async {
-  //           await data!.getFileData.execute(data!.currentPage, Priority.high)
-  //               .chain((fileData, signal) async {
-  //             final Uint8List thumbnailData;
-  //             if (fileData is ImageMemoryData) {
-  //               thumbnailData =
-  //             } else {
-  //               thumbnail =
-  //             }
-  //           });
-  //           ThumbnailInfo.putIfAbsent.execute(
-  //               source.identifier, (signal) async {
-  //             final fileData = await data!.getFileData.execute(
-  //                 data!.currentPage, Priority.high, signal);
-  //             if (fileData.isSuccessful) {
-  //
-  //             }
-  //           })
-  //           final thumbnail = data!.getFileData
-  //               .execute(data!.currentPage, Priority.high)
-  //               .chain(ThumbnailProcessor.process);
-  //           final cache =
-  //           MangaCache.createFromIdentifier.execute(source.identifier);
-  //           await Future.wait([thumbnail, cache]);
-  //           if (thumbnail.isSuccessful && cache.isSuccessful) {
-  //             cache.unwrap.thumbnail = thumbnail.unwrap;
-  //             cache.unwrap.ensureReady.execute();
-  //             cache.unwrap.markAsDirty();
-  //           }
-  //         },
-  //       ),
-  //     ],
-  //   );
-  // }
+  ContextMenu _buildContextMenu(BuildContext context) {
+    return ContextMenu(
+      entries: [
+        MenuItem(
+          label: 'Set as Manga Cover',
+          icon: Icons.image_outlined,
+          onSelected: () async {
+            if (!mounted || widget.hidden || widget.blurred || data == null) {
+              return;
+            }
+            final identifier = widget.source.identifier;
+            final ImageMemoryData image;
+            if (data is ImageMemoryData) {
+              image = data as ImageMemoryData;
+            } else {
+              final screenshot = await videoPlayer!.screenshot();
+              if (screenshot == null) {
+                return;
+              }
+              image = ImageMemoryData(
+                bytes: screenshot,
+                byteSize: screenshot.length,
+              );
+            }
+            await ThumbnailProcessor.process
+                .execute(image)
+                .map((thumbnail) => ThumbnailInfo.put(identifier, thumbnail));
+          },
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     if (data == null) {
       return const SizedBox.shrink();
     }
-    final Widget view;
+    Widget view;
     if (data is ImageMemoryData) {
       view = _buildImage(context, data as ImageMemoryData);
     } else if (data is VideoFileData) {
       view = _buildVideo(context, data as VideoFileData);
     } else {
       throw UnimplementedError();
+    }
+    if (!widget.hidden && !widget.blurred) {
+      view = ContextMenuRegion(
+        contextMenu: _buildContextMenu(context),
+        child: view,
+      );
     }
     return Stack(
       children: [

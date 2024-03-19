@@ -183,7 +183,6 @@ class _AlbumEntryState extends State<AlbumEntry> {
 
   @override
   Widget build(BuildContext context) {
-    print(widget.cache.source.identifier);
     /// Get width constrain
     return LayoutBuilder(
       builder: (context, constraints) {

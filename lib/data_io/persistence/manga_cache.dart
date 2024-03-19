@@ -183,7 +183,6 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
               .throwErr();
           await thumbnail.readDimensions().throwErr();
           thumbnail.identifier = identifier;
-          print(thumbnail);
           log.t((
             "MangaCache",
             "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",

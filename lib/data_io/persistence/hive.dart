@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/src/hive_impl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -124,7 +123,7 @@ class Storage {
 
   /// Add to [_dirtyObjects]
   static void markAsDirty(BoxStorage obj) {
-    _tempObjects.putIfAbsent(obj.tempKey, () => obj);
+    _tempObjects[obj.tempKey] = obj;
     _dirtyObjects.putIfAbsent(obj.boxPath!, () => {})[obj.boxKey!] = obj;
   }
 
