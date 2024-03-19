@@ -6,7 +6,7 @@ import 'package:flutter_context_menu/flutter_context_menu.dart';
 import 'package:path/path.dart';
 import 'package:styled_widget/styled_widget.dart';
 import 'package:tmv/data_io/manga_loader.dart';
-import 'package:tmv/global/async/async.dart';
+import 'package:tmv/data_io/persistence/thumbnail.dart';
 import 'package:tmv/ui/drawer/about.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yaml_writer/yaml_writer.dart';
@@ -150,7 +150,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
           MenuItem(
             label: 'Set as Parent Gallery Cover',
             icon: Icons.image_outlined,
-            onSelected: () {
+            onSelected: () async {
               if (widget.cache.source.path == null) {
                 showDefaultDialog(
                   context: context,
@@ -158,15 +158,18 @@ class _AlbumEntryState extends State<AlbumEntry> {
                 );
                 return;
               }
-              MangaCache.createFromIdentifier
-                  .execute(
-                      DirectoryMangaSource(dirname(widget.cache.source.path!))
-                          .identifier)
-                  .map((cache) {
-                cache.thumbnail = widget.cache.thumbnail;
-                cache.ensureReady.execute();
-                cache.markAsDirty();
-              });
+
+              final identifier = DirectoryMangaSource(
+                dirname(widget.cache.source.path!),
+              ).identifier;
+              ThumbnailInfo.put(
+                  identifier,
+                  ThumbnailInfo(
+                    data: widget.cache.thumbnail!.data,
+                    width: widget.cache.thumbnail!.width,
+                    height: widget.cache.thumbnail!.height,
+                    identifier: identifier,
+                  ));
             },
           ),
         ],
@@ -180,6 +183,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.cache.source.identifier);
     /// Get width constrain
     return LayoutBuilder(
       builder: (context, constraints) {

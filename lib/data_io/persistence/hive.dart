@@ -20,9 +20,6 @@ export 'package:hive_flutter/hive_flutter.dart';
 /// If not supported or otherwise inaccessible, this will disable hive storage
 const bool hiveDisabled = kIsWeb;
 
-/// Storage for temporary objects
-final _tempHive = HiveImpl();
-
 class Storage {
   /// Periodically save all objects
   static late final Async<void> _autoSaveThread;
@@ -40,8 +37,11 @@ class Storage {
   /// number is the same)
   static final Map<String, int> _boxRefCount = {};
 
-  /// Objects that are saved to temp but not yet to permanent
-  static Set<String> _dirtyObjects = {};
+  /// Objects updated but not saved yet
+  static Map<String, Map<String, BoxStorage>> _dirtyObjects = {};
+
+  /// Objects cached in memory
+  static final Map<String, BoxStorage> _tempObjects = {};
 
   static AsyncOut<void> init(AsyncSignal signal) async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +52,6 @@ class Storage {
     if (!hiveDisabled) {
       await getApplicationSupportDirectory()
           .then((dir) => Hive.initFlutter(dir.path));
-      await getTemporaryDirectory().then((dir) => _tempHive.init(dir.path));
       Hive
         ..registerAdapter(AppStorageAdapter())
         ..registerAdapter(MangaSourceAdapter())
@@ -62,18 +61,7 @@ class Storage {
         ..registerAdapter(FileFilterAdapter())
         ..registerAdapter(FileSorterAdapter())
         ..registerAdapter(FileSelectionAdapter());
-      _tempHive
-        ..registerAdapter(AppStorageAdapter())
-        ..registerAdapter(MangaSourceAdapter())
-        ..registerAdapter(MangaViewDataAdapter())
-        ..registerAdapter(MangaCacheAdapter())
-        ..registerAdapter(ThumbnailInfoAdapter())
-        ..registerAdapter(FileFilterAdapter())
-        ..registerAdapter(FileSorterAdapter())
-        ..registerAdapter(FileSelectionAdapter());
 
-      // open temp box
-      _tempBox = await _tempHive.openBox(tempBoxPath);
       // start auto save thread
       _autoSaveThread = Async((signal) async {
         while (!signal.isTriggered) {
@@ -82,39 +70,32 @@ class Storage {
             Future.delayed(const Duration(seconds: 10)),
             signal.future,
           ]);
-          // create a map of boxPath to objects
-          final objects = _dirtyObjects
-              .map((key) => _tempBox!.get(key) as BoxStorage)
-              .toList();
-          final boxMap = <String, List<BoxStorage>>{};
-          for (final obj in objects) {
-            boxMap.putIfAbsent(obj.boxPath!, () => []).add(obj);
-          }
-          // save each box (if saved, return [], else return unsaved objects)
-          final unsavedObjects = await boxMap.entries
+          // save each box
+          _dirtyObjects = await _dirtyObjects.entries
               .map(
-                (entry) => (signal) => withBox<List<BoxStorage>>.execute(
+                (entry) => (signal) =>
+                    withBox<MapEntry<String, Map<String, BoxStorage>>>.execute(
                         entry.key, (box, _) async {
-                      for (final obj in entry.value) {
+                      for (final obj in entry.value.values) {
                         log.t(("persistence", "saving ${obj.tempKey}: $obj"));
                         await box.put(obj.boxKey, obj);
                       }
-                      return const Ok(<BoxStorage>[]);
+                      return Ok(MapEntry(entry.key, {}));
                     }).onFail(
                       (err, _) {
                         log.w((
                           "persistence",
                           "failed to save box ${entry.key}: $err"
                         ));
-                        return Ok(entry.value);
+                        return Ok(entry);
                       },
                     ),
               )
               // not checking for signal here, because the signal may have been triggered
               .executeLimited()
-              .expand((e) => e.value)
-              .toList();
-          _dirtyObjects = unsavedObjects.map((e) => e.tempKey).toSet();
+              .map((entry) => entry.value)
+              .toList()
+              .then(Map.fromEntries);
         }
         return ok;
       });
@@ -137,27 +118,14 @@ class Storage {
       _autoSaveThread.cancel(),
       Future.delayed(const Duration(seconds: 1)),
     ]);
-    await tempBox.close();
-    await tempBox.deleteFromDisk();
     log.w("Storage shutdown complete");
     return ok;
   }
 
-  /// Path to a temporary box
-  ///
-  /// This box is opened for the entire app lifetime. Objects will be written to
-  /// permanent boxes when the app is closed
-  static final String tempBoxPath = uuid.v4();
-
-  /// Temporary box stays open for the entire app lifetime
-  static Box? _tempBox;
-
-  static Box get tempBox => _tempBox!;
-
-  /// Save to temporary location
-  static AsyncOut<void> saveTemp(BoxStorage obj, AsyncSignal signal) {
-    _dirtyObjects.add(obj.tempKey);
-    return tempBox.put(obj.tempKey, obj).asOk;
+  /// Add to [_dirtyObjects]
+  static void markAsDirty(BoxStorage obj) {
+    _tempObjects.putIfAbsent(obj.tempKey, () => obj);
+    _dirtyObjects.putIfAbsent(obj.boxPath!, () => {})[obj.boxKey!] = obj;
   }
 
   /// Save to permanent location
@@ -209,63 +177,46 @@ class Storage {
     }
   }
 
-  /// Try to load this object from disk
-  static AsyncOut<T> tryLoad<T extends BoxStorage<T>>(
-      String boxPath, String boxKey, AsyncSignal signal) async {
+  static AsyncOut<T> putIfAbsent<T extends BoxStorage<T>>(String boxPath,
+      String boxKey, AsyncExecutor0<T>? value, AsyncSignal signal) async {
     if (hiveDisabled) {
-      return Err(["Hive disabled", signal]);
-    }
-    if (_tempBox == null) {
-      return Err("Can't load in isolate");
+      return value?.execute(signal) ?? Err(["Hive disabled", signal]);
     }
     // if object is already in temp box, return it
-    final temp = tempBox.get(BoxStorage.formatTempKey(boxPath, boxKey));
-    if (temp is T) {
-      temp
-        ..boxPath = boxPath
-        ..boxKey = boxKey;
-      return Ok(temp);
+    final tempKey = BoxStorage.formatTempKey(boxPath, boxKey);
+    if (_tempObjects.containsKey(tempKey)) {
+      return Ok(_tempObjects[tempKey] as T);
     }
-    // if object is found in the permanent box, return it, and save to temp box
-    return await withBox<T>(boxPath, (box, signal) async {
-      final result = box.get(boxKey);
-      if (result == null) {
-        return Err("No such key", signal);
-      }
-      (result as T)
+    // fet in permanent box or create it, and save to temp box
+    final result = await withBox<T>.execute(
+      boxPath,
+      (box, signal) =>
+          (box.get(boxKey) as T?)?.asOk ?? value?.execute(signal) ?? Err(),
+      signal,
+    );
+    if (result is Ok) {
+      result.value
         ..boxPath = boxPath
         ..boxKey = boxKey;
-      await saveTemp.execute(result);
-      return Ok(result);
-    }, signal)
-        .asFuture
-        .catchError((e, s) {
-      log.w("Failed to load", error: e, stackTrace: s);
-      return Err(e, signal);
-    });
+      markAsDirty(result.value);
+    }
+    return result;
   }
 
-  /// Try to load this object from disk, or create a new one
-  static AsyncOut<T> loadOr<T extends BoxStorage<T>>(
-      String boxPath,
-      String boxKey,
-      AsyncSignal signal,
-      AsyncExecutor0<T> objectCreator) async {
-    return tryLoad<T>.execute(boxPath, boxKey, signal)
-        .onFail((_, signal) async {
-      final obj = await objectCreator(signal);
-      if (obj is Ok) {
-        obj.value.markAsDirty();
-      }
-      return obj;
-    });
+  static T? findTemp<T extends BoxStorage<T>>(String boxPath, String boxKey) =>
+      _tempObjects[BoxStorage.formatTempKey(boxPath, boxKey)] as T?;
+
+  /// Remove from cache
+  static void dropTemp(BoxStorage obj) {
+    _tempObjects.remove(obj.tempKey);
   }
 
   /// Try to remove this object from disk
   static AsyncOut<void> remove(
-      String boxPath, String key, AsyncSignal signal) async {
-    await tempBox.delete(BoxStorage.formatTempKey(boxPath, key));
-    return await withBox(boxPath, (box, _) => box.delete(key).asOk, signal);
+      String boxPath, String boxKey, AsyncSignal signal) async {
+    _tempObjects.remove(BoxStorage.formatTempKey(boxPath, boxKey));
+    _dirtyObjects[boxPath]?.remove(boxKey);
+    return await withBox(boxPath, (box, _) => box.delete(boxKey).asOk, signal);
   }
 
   /// Try to open box
@@ -321,48 +272,18 @@ mixin BoxStorage<T> {
     return false;
   }
 
-  /// Triggered when this object is modified
-  Completer<void> _dirtySignal = Completer.sync();
-
-  /// A thread to repeatedly check for [_dirty] and perform save
-  Async? _autoSaveThread;
-
   /// Mark this object as modified to be saved
   void markAsDirty() {
-    if (!_dirtySignal.isCompleted) {
-      _dirtySignal.complete();
-    }
-    _autoSaveThread ??= Async((signal) async {
-      while (true) {
-        await Future.any([
-          Future.wait([
-            _dirtySignal.future,
-            Future.delayed(const Duration(milliseconds: 500)),
-          ]),
-          signal.future,
-        ]);
-        if (signal.isTriggered) {
-          return Err(signal);
-        }
-        if (_dirtySignal.isCompleted) {
-          await _save.execute(signal);
-          _dirtySignal = Completer.sync();
-        }
-      }
-    });
+    Storage.markAsDirty(this);
   }
-
-  /// Save to temporary location
-  AsyncOut<void> _save(AsyncSignal signal) => Storage.saveTemp(this, signal);
 
   /// Force save immediately (to permanent location)
   AsyncOut<void> forceSave(AsyncSignal signal) async {
-    _autoSaveThread?.cancel();
-    _autoSaveThread = null;
     return await Storage.save(this, signal);
   }
 
+  /// Remove this object from cache storage
   void dispose() {
-    _autoSaveThread?.cancel();
+    Storage.dropTemp(this);
   }
 }

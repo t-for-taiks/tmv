@@ -30,9 +30,11 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   @override
   String get boxPath => _boxPath;
 
-  static AsyncOut<MangaCache> tryLoad(String identifier, AsyncSignal signal) async {
+  static AsyncOut<MangaCache> tryLoad(
+      String identifier, AsyncSignal signal) async {
     // final stopwatch = Stopwatch()..start();
-    final result = await Storage.tryLoad<MangaCache>(_boxPath, identifier, signal);
+    final result = await Storage.putIfAbsent<MangaCache>(
+        _boxPath, identifier, null, signal);
     // log.d("MangaCache.tryLoad $boxKey in ${stopwatch.elapsedMilliseconds}ms");
     return result;
   }
@@ -52,9 +54,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
           )
           .catchError((error, stack) => Err(error, stack));
 
-  /// Thumbnail of the manga cover
-  @HiveField(0)
-  ThumbnailInfo? thumbnail;
+  ThumbnailInfo? get thumbnail => ThumbnailInfo.find(source.identifier);
 
   ImageProvider get thumbnailImage {
     if (thumbnail == null) {
@@ -95,7 +95,6 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
 
   MangaCache({
     required this.source,
-    required this.thumbnail,
     required this.viewData,
     required this.length,
     required this.info,
@@ -146,6 +145,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   AsyncOut<void> getReady(AsyncSignal signal) async {
     final stopwatch = Stopwatch()..start();
     if (!loadedFromStorage) {
+      final identifier = this.source.identifier;
       // build a temp source with recursion off
       final source = MangaSource.fromIdentifier(this.source.identifier);
       source.recursive = false;
@@ -154,7 +154,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       length = source.length;
       log.t((
         "MangaCache",
-        "MangaSource.getReady ${source.identifier} in ${stopwatch.elapsed}",
+        "MangaSource.getReady $identifier in ${stopwatch.elapsed}",
       ));
       stopwatch.reset();
 
@@ -164,30 +164,45 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       info = await _loadInfo.execute(signal).throwErr();
       log.t((
         "MangaCache",
-        "MangaCache._loadInfo ${source.identifier} in ${stopwatch.elapsed}",
+        "MangaCache._loadInfo $identifier in ${stopwatch.elapsed}",
       ));
       stopwatch.reset();
-      if (thumbnail == null) {
-        final viewData = MangaViewData(source);
-        await viewData.ensureReady.execute(signal);
-        thumbnail = await _loadThumbnail
-            .execute(viewData, signal)
-            // in case there's no thumbnail generated
-            // if there's a sub-dir, use an empty thumbnail
-            .onFail((value, signal) =>
-                containsSub ? Ok(ThumbnailInfo.empty()) : value)
-            // otherwise, throw error
-            .throwErr();
-        await thumbnail!.readDimensions().throwErr();
-        log.t((
-          "MangaCache",
-          "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
-        ));
-        markAsDirty();
-        viewData.dispose();
-      }
+      // try to load thumbnail from storage
+      await ThumbnailInfo.putIfAbsent(
+        identifier,
+        (signal) async {
+          final viewData = MangaViewData(source);
+          await viewData.ensureReady.execute(signal);
+          final thumbnail = await _loadThumbnail
+              .execute(viewData, signal)
+              // in case there's no thumbnail generated
+              // if there's a sub-dir, use an empty thumbnail
+              .onFail((value, signal) =>
+                  containsSub ? Ok(ThumbnailInfo.empty()) : value)
+              // otherwise, throw error
+              .throwErr();
+          await thumbnail.readDimensions().throwErr();
+          thumbnail.identifier = identifier;
+          print(thumbnail);
+          log.t((
+            "MangaCache",
+            "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
+          ));
+          markAsDirty();
+          viewData.dispose();
+          return Ok(thumbnail);
+        },
+        signal,
+      );
       stopwatch.reset();
       source.dispose();
+    } else {
+      // load thumbnail from storage
+      await ThumbnailInfo.putIfAbsent(
+        source.identifier,
+        null,
+        signal,
+      );
     }
     searchableText = Searchable(title + info.toString());
     viewData ??= MangaViewData(source);
@@ -213,6 +228,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
     release();
     viewData?.dispose();
     viewData?.cache = null;
+    thumbnail?.dispose();
   }
 
   Object toJsonObject() => {

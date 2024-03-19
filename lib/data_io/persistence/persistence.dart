@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
@@ -23,6 +24,9 @@ class Lifecycle with ReadyFlagMixin<Lifecycle> {
     try {
       await Storage.shutdown.execute().timeout(const Duration(seconds: 2));
     } finally {
+      if (kDebugMode) {
+        throw Exception();
+      }
       SystemNavigator.pop();
       exit(0);
     }
@@ -46,11 +50,12 @@ class AppStorage with BoxStorage<AppStorage> {
   static AppStorage get instance => _instance!;
 
   static AsyncOut<void> init(AsyncSignal signal) async {
-    _instance =
-        await Storage.tryLoad<AppStorage>.execute(_boxPath, _boxKey, signal)
-            .logFail("?")
-            .onFail((_, signal) => Ok(AppStorage()))
-            .throwErr();
+    _instance = await Storage.putIfAbsent<AppStorage>.execute(
+      _boxPath,
+      _boxKey,
+      (signal) => Ok(AppStorage()),
+      signal,
+    ).throwErr();
     _instance!.galleryPath = null;
     return ok;
   }

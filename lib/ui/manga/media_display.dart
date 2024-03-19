@@ -244,6 +244,48 @@ class _MediaDisplayState extends State<MediaDisplay> {
     );
   }
 
+
+  // ContextMenu _buildContextMenu(BuildContext context) {
+  //   return ContextMenu(
+  //     entries: [
+  //       MenuItem(
+  //         label: 'Set as Manga Cover',
+  //         icon: Icons.image_outlined,
+  //         onSelected: () async {
+  //           await data!.getFileData.execute(data!.currentPage, Priority.high)
+  //               .chain((fileData, signal) async {
+  //             final Uint8List thumbnailData;
+  //             if (fileData is ImageMemoryData) {
+  //               thumbnailData =
+  //             } else {
+  //               thumbnail =
+  //             }
+  //           });
+  //           ThumbnailInfo.putIfAbsent.execute(
+  //               source.identifier, (signal) async {
+  //             final fileData = await data!.getFileData.execute(
+  //                 data!.currentPage, Priority.high, signal);
+  //             if (fileData.isSuccessful) {
+  //
+  //             }
+  //           })
+  //           final thumbnail = data!.getFileData
+  //               .execute(data!.currentPage, Priority.high)
+  //               .chain(ThumbnailProcessor.process);
+  //           final cache =
+  //           MangaCache.createFromIdentifier.execute(source.identifier);
+  //           await Future.wait([thumbnail, cache]);
+  //           if (thumbnail.isSuccessful && cache.isSuccessful) {
+  //             cache.unwrap.thumbnail = thumbnail.unwrap;
+  //             cache.unwrap.ensureReady.execute();
+  //             cache.unwrap.markAsDirty();
+  //           }
+  //         },
+  //       ),
+  //     ],
+  //   );
+  // }
+
   @override
   Widget build(BuildContext context) {
     if (data == null) {

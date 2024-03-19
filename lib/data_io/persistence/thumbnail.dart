@@ -5,15 +5,16 @@ import 'dart:ui';
 
 import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart';
 import 'package:image_size_getter/image_size_getter.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:yaml_writer/yaml_writer.dart';
 
 import '../../global/async/isolate_worker.dart';
 import '../../global/global.dart';
 import '../file/file_selection.dart';
+import 'hive.dart';
 
 part 'thumbnail.g.dart';
 
@@ -31,9 +32,14 @@ const int minimumByteSizeToCreateThumbnail = 1024; // 512KB
 typedef _PIM = PriorityIsolatePoolManager<int, FileData, ThumbnailInfo>;
 
 @HiveType(typeId: 7)
-class ThumbnailInfo {
+class ThumbnailInfo with BoxStorage<ThumbnailInfo> {
+  static const _boxPath = "thumbnail_info";
+
+  @override
+  String get boxPath => _boxPath;
+
   @HiveField(0)
-  final Uint8List data;
+  Uint8List data;
   @HiveField(1)
   int? width;
   @HiveField(2)
@@ -41,18 +47,45 @@ class ThumbnailInfo {
 
   ThumbnailInfo({
     required this.data,
+    String? identifier,
     this.width,
     this.height,
-  });
+    bool markAsDirty = false,
+  }) {
+    boxKey = identifier;
+    if (markAsDirty) {
+      this.markAsDirty();
+    }
+  }
 
-  factory ThumbnailInfo.empty() => ThumbnailInfo(
+  set identifier(String value) => boxKey = value;
+
+  static ThumbnailInfo? find(String identifier) =>
+      Storage.findTemp(_boxPath, identifier);
+
+  static void put(String identifier, ThumbnailInfo info) {
+    final existing = find(identifier);
+    if (existing != null) {
+      Storage.dropTemp(existing);
+    }
+    Storage.markAsDirty(info);
+    info.markAsDirty();
+  }
+
+  static AsyncOut<ThumbnailInfo> putIfAbsent(String identifier,
+      AsyncExecutor0<ThumbnailInfo>? value, AsyncSignal signal) =>
+      Storage.putIfAbsent(_boxPath, identifier, value, signal);
+
+  factory ThumbnailInfo.empty() =>
+      ThumbnailInfo(
         data: Uint8List(0),
         width: 100,
         height: 100,
       );
 
   /// Empty thumbnail for folder
-  static Future<ThumbnailInfo> folder() async => ThumbnailInfo(
+  static Future<ThumbnailInfo> folder() async =>
+      ThumbnailInfo(
         data: await rootBundle
             .load("assets/images/image_placeholder_no_preview.webp")
             .then((b) => b.buffer.asUint8List()),
@@ -75,6 +108,18 @@ class ThumbnailInfo {
   }
 
   bool get isEmpty => data.isEmpty;
+
+  Object toJsonObject() =>
+      {
+        "_": runtimeType.toString(),
+        "identifier": boxKey,
+        "data": data.length.toKb,
+        "width": width,
+        "height": height,
+      };
+
+  @override
+  String toString() => YamlWriter().write(toJsonObject());
 }
 
 /// Isolate that processes image to thumbnail
@@ -87,12 +132,13 @@ class ThumbnailProcessor {
 
   static int _generateKey() => _key += 1;
 
-  static Future<_PIM> _maybeInitialize() => Future.sync(() async {
+  static Future<_PIM> _maybeInitialize() =>
+      Future.sync(() async {
         if (_initialized == null) {
           _initialized = Completer();
           await manager.createIsolates.execute(
             thumbnailIsolateCount,
-            () => ThumbnailWorker(),
+                () => ThumbnailWorker(),
           );
           _initialized!.complete();
         } else if (!_initialized!.isCompleted) {
@@ -103,7 +149,8 @@ class ThumbnailProcessor {
 
   /// Process an image to thumbnail
   static AsyncOut<ThumbnailInfo> process(FileData file, AsyncSignal signal) =>
-      _maybeInitialize().then((manager) => manager.processWithPriority(
+      _maybeInitialize().then((manager) =>
+          manager.processWithPriority(
             _generateKey(),
             file,
             0,
@@ -134,8 +181,8 @@ class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
       return Err("Failed to decode image");
     }
     log.t((
-      "Thumbnail",
-      "Decoded image (${image.width}x${image.height}, ${kb(image.lengthInBytes)})"
+    "Thumbnail",
+    "Decoded image (${image.width}x${image.height}, ${kb(image.lengthInBytes)})"
     ));
     final scale = math.pow(thumbnailSize / (image.width * image.height), 0.5);
     final width = (image.width * scale).ceil();
@@ -151,15 +198,16 @@ class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
       quality: 80,
     );
     log.t((
-      "Thumbnail",
-      "Complete processing thumbnail (${width}x$height, ${kb(thumbnail.lengthInBytes)})"
+    "Thumbnail",
+    "Complete processing thumbnail (${width}x$height, ${kb(
+        thumbnail.lengthInBytes)})"
     ));
     return Ok(ThumbnailInfo(data: thumbnail, width: width, height: height));
   }
 
   Future<Result<ThumbnailInfo>> _processVideo(String source) async {
     final tempPath =
-        await getTemporaryDirectory().then((d) => join(d.path, uuid.v4()));
+    await getTemporaryDirectory().then((d) => join(d.path, uuid.v4()));
     return FcNativeVideoThumbnail()
         .getVideoThumbnail(
       srcFile: source,

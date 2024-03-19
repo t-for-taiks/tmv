@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:path/path.dart';
 import 'package:styled_widget/styled_widget.dart';
+import 'package:tmv/data_io/persistence/thumbnail.dart';
 
 import '../../data_io/file/file_io.dart';
 import '../../data_io/file/file_selection.dart';
@@ -348,10 +349,8 @@ class _SelectViewState extends State<SelectView> {
             .chain(ReadyFlagMixin.makeReady))
         .executeLimited(signal, 16);
     // if parent gallery lacks a thumbnail, use the first album's thumbnail
-    final parentCache = await MangaCache.tryLoad.execute(
-      DirectoryMangaSource(AppStorage.instance.galleryPath!).identifier,
-      signal,
-    );
+    final parentIdentifier =
+        DirectoryMangaSource(AppStorage.instance.galleryPath!).identifier;
     // wait for load and add to list dynamically
     await for (final cache in cacheStream) {
       signal.setProgress(current: signal.current + 1);
@@ -361,8 +360,19 @@ class _SelectViewState extends State<SelectView> {
       if (cache is Ok) {
         log.t(("Album", "Loaded ${cache.value.title}"));
         mangaList.add(cache.value);
-        if (parentCache is Ok && parentCache.value.thumbnail?.isEmpty == true) {
-          parentCache.valueOrNull?.thumbnail = cache.value.thumbnail;
+        // if parent gallery lacks a thumbnail, use the first album's thumbnail
+        final cacheThumbnail = cache.value.thumbnail;
+        if (ThumbnailInfo.find(parentIdentifier)?.isEmpty != false &&
+            cacheThumbnail != null) {
+          ThumbnailInfo.put(
+            parentIdentifier,
+            ThumbnailInfo(
+              identifier: parentIdentifier,
+              data: cacheThumbnail.data,
+              width: cacheThumbnail.width,
+              height: cacheThumbnail.height,
+            ),
+          );
         }
         setState(() {});
       } else {
