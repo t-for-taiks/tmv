@@ -108,25 +108,28 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
     boxKey = source.identifier;
   }
 
-  AsyncOut<Map<String, dynamic>> _loadInfo(MangaSource source, AsyncSignal signal) => metaInfoFiles
-      .followedBy(
-        source.files.where(
-          (path) => [".txt", ".yaml", ".json"].contains(extension(path)),
-        ),
-      )
-      .take(metaInfoQueryLimit)
-      .map((path) => source.getData.bind(path, null))
-      .executeOrdered(signal)
-      .map((result) {
-        if (result is Ok) {
-          log.t(("MangaCache", "read text ${result.value.length.toKb}"));
-        }
-        return result;
-      })
-      .where(Result.isOk)
-      .asyncMap((result) => parseYaml<String, dynamic>(result.value, signal))
-      .handleError(Err.new)
-      .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
+  AsyncOut<Map<String, dynamic>> _loadInfo(
+          MangaSource source, AsyncSignal signal) =>
+      metaInfoFiles
+          .followedBy(
+            source.files.where(
+              (path) => [".txt", ".yaml", ".json"].contains(extension(path)),
+            ),
+          )
+          .take(metaInfoQueryLimit)
+          .map((path) => source.getData.bind(path, null))
+          .executeOrdered(signal)
+          .map((result) {
+            if (result is Ok) {
+              log.t(("MangaCache", "read text ${result.value.length.toKb}"));
+            }
+            return result;
+          })
+          .where(Result.isOk)
+          .asyncMap(
+              (result) => parseYaml<String, dynamic>(result.value, signal))
+          .handleError(Err.new)
+          .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
 
   AsyncOut<ThumbnailInfo> _loadThumbnail(
     MangaViewData viewData,
@@ -144,14 +147,14 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
   @override
   AsyncOut<void> getReady(AsyncSignal signal) async {
     final stopwatch = Stopwatch()..start();
-    if (!loadedFromStorage) {
-      final identifier = this.source.identifier;
-      // build a temp source with recursion off
-      final source = MangaSource.fromIdentifier(this.source.identifier);
-      source.recursive = false;
+    final identifier = source.identifier;
+    // build a temp source with recursion off
+    final tempSource = MangaSource.fromIdentifier(source.identifier);
+    tempSource.recursive = false;
 
-      await source.ensureReady.execute(signal);
-      length = source.length;
+    if (!loadedFromStorage) {
+      await tempSource.ensureReady.execute(signal);
+      length = tempSource.length;
       log.t((
         "MangaCache",
         "MangaSource.getReady $identifier in ${stopwatch.elapsed}",
@@ -159,50 +162,46 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       stopwatch.reset();
 
       // Currently, only sub-dirs from directory sources are supported
-      containsSub = source.containsSub;
+      containsSub = tempSource.containsSub;
 
-      info = await _loadInfo.execute(source, signal).throwErr();
+      info = await _loadInfo.execute(tempSource, signal).throwErr();
       log.t((
         "MangaCache",
         "MangaCache._loadInfo $identifier in ${stopwatch.elapsed}",
       ));
       stopwatch.reset();
-      // try to load thumbnail from storage
-      await ThumbnailInfo.putIfAbsent(
-        identifier,
-        (signal) async {
-          final viewData = MangaViewData(source);
-          await viewData.ensureReady.execute(signal);
-          final thumbnail = await _loadThumbnail
-              .execute(viewData, signal)
-              // in case there's no thumbnail generated
-              // if there's a sub-dir, use an empty thumbnail
-              .onFail((value, signal) =>
-                  containsSub ? Ok(ThumbnailInfo.empty()) : value)
-              // otherwise, throw error
-              .throwErr();
-          await thumbnail.readDimensions().throwErr();
-          thumbnail.identifier = identifier;
-          log.t((
-            "MangaCache",
-            "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
-          ));
-          viewData.dispose();
-          return Ok(thumbnail);
-        },
-        signal,
-      );
       markAsDirty();
-      stopwatch.reset();
-      source.dispose();
-    } else {
-      // load thumbnail from storage
-      await ThumbnailInfo.putIfAbsent(
-        source.identifier,
-        null,
-        signal,
-      );
     }
+    // try to load thumbnail from storage
+    await ThumbnailInfo.putIfAbsent(
+      identifier,
+      (signal) async {
+        await tempSource.ensureReady.execute(signal);
+        final viewData = MangaViewData(tempSource);
+        await viewData.ensureReady.execute(signal);
+        final thumbnail = await _loadThumbnail
+            .execute(viewData, signal)
+            // in case there's no thumbnail generated
+            // if there's a sub-dir, use an empty thumbnail
+            .onFail((value, signal) =>
+                containsSub ? Ok(ThumbnailInfo.empty()) : value)
+            // otherwise, throw error
+            .throwErr();
+        await thumbnail.readDimensions().throwErr();
+        thumbnail.identifier = identifier;
+        log.t((
+          "MangaCache",
+          "Thumbnail created ${tempSource.identifier} in ${stopwatch.elapsed}",
+        ));
+        markAsDirty();
+        viewData.dispose();
+        return Ok(thumbnail);
+      },
+      signal,
+    );
+    stopwatch.reset();
+    tempSource.dispose();
+
     searchableText = Searchable(title + info.toString());
     viewData ??= MangaViewData(source);
     viewData!.cache = this;
