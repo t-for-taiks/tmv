@@ -56,8 +56,8 @@ class _SelectViewState extends State<SelectView> {
       return _filteredList!;
     }
     if (searchQuery.isEmpty) {
-      clearSearchMaybeSort();
-      return _filteredList!;
+      maybeSort();
+      return _filteredList = mangaList;
     }
 
     final queryList =
@@ -68,16 +68,15 @@ class _SelectViewState extends State<SelectView> {
   }
 
   /// Sort only once after load gallery is done
-  void clearSearchMaybeSort() {
+  void maybeSort() {
     if (loadGalleryProcess?.isCompleted == true && !_mangaListFinalSorted) {
       _mangaListFinalSorted = true;
       mangaList.sortByCompare(
         (manga) => getRunesForSort(manga.title),
         stringRunesCompare,
       );
+      _filteredList = null;
     }
-    searchQuery = "";
-    _filteredList = mangaList;
   }
 
   Future<void> _applyPath(String? galleryPath) async {
@@ -109,18 +108,14 @@ class _SelectViewState extends State<SelectView> {
     super.didUpdateWidget(oldWidget);
 
     /// If unsorted, sort when hidden
-    if (!oldWidget.hidden && widget.hidden) {
-      clearSearchMaybeSort();
+    if (!oldWidget.hidden && widget.hidden && searchQuery.isEmpty) {
+      maybeSort();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (widget.hidden) {
-      return const SizedBox.shrink();
-    }
-    return buildView(context, widget.maxWidth, widget.maxHeight);
-  }
+  Widget build(BuildContext context) =>
+      buildView(context, widget.maxWidth, widget.maxHeight);
 
   Widget _buildLoadingIndicator(BuildContext context) {
     final progressLabel = loadGalleryProcess!.signal.progressLabel;

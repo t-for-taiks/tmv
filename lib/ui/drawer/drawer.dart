@@ -7,8 +7,8 @@ import "package:styled_widget/styled_widget.dart";
 
 /// A builder for the view of a drawer entry
 ///
-/// If [DrawerEntry.neverDestroy] is true, [show] can be false when the view is
-/// not visible, in which case builder should return an empty widget
+/// If [DrawerEntry.neverDestroy] is true, [show] will be false when the view is
+/// not visible, in which case drawer will build the view but not show it
 ///
 /// Because the view can be moved from drawer to navigation bar, it must use a
 /// global key if it needs to keep its state
@@ -192,12 +192,12 @@ class DrawerViewState extends State<DrawerView> {
             .whereIndexed((index, element) => index != activeIndex)
             .mapIndexed((index, entry) => entry.viewBuilder(
                   context,
-                  0,
-                  0,
+                  openWidth(maxWidth),
+                  maxHeight,
                   false,
                   (signal) => drawerControlCallback(signal, index),
                   pinButtonBuilder,
-                ));
+                ).positioned(right: maxWidth, top: 0));
 
         return Row(children: [
           /// Navigation bar
