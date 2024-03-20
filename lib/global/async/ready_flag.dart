@@ -34,7 +34,7 @@ mixin ReadyFlagMixin<T extends ReadyFlagMixin<T>> {
     }
     return ready ??= getReady
         .execute(signal)
-        .catchError((err) => err as Err)
+        .catchError((err) => err, test: (err) => err is Err)
         .map((_) => this as T);
   }
 

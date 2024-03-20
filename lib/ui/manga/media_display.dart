@@ -137,7 +137,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
           await _getVideoDimensions.execute();
         }
         log.t(("schedule", "decode complete $debugInfo"));
-        await widget.buildComplete.complete(totalSizeBytes);
+        widget.buildComplete.completeOk(totalSizeBytes);
         return ok;
       });
 

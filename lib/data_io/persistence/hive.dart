@@ -1,5 +1,4 @@
 import "dart:async";
-import "dart:math";
 
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
@@ -23,18 +22,17 @@ class Storage {
   /// Periodically save all objects
   static late final Async<void> _autoSaveThread;
 
-  /// Opened boxes (excluding temp)
-  static final Map<String, Box> _openedBoxes = {};
+  /// Opened boxes
+  ///
+  /// If key is found but Async is not ready, the process must wait. The Async
+  /// may resolve as Ok or Err.
+  static final Map<String, Async<Box>> _openedBoxes = {};
 
-  /// Reference count for each box
-  ///
-  /// 0: Box is being closed or opened. Do not access until it's removed
-  /// negative: Box is not used, and can be closed
-  ///
-  /// When a box is done being used, and RefCount reaches 0, it will be assigned
-  /// a random negative number, and will be closed after a short delay (if the
-  /// number is the same)
-  static final Map<String, int> _boxRefCount = {};
+  /// Timestamp of last access to the box
+  static final Map<String, int> _boxLastAccessed = {};
+
+  /// Periodically close boxes that have not been accessed
+  static late final Async<void> _boxCleanupThread;
 
   /// Objects updated but not saved yet
   static Map<String, Map<String, BoxStorage>> _dirtyObjects = {};
@@ -95,6 +93,33 @@ class Storage {
               .map((entry) => entry.value)
               .toList()
               .then(Map.fromEntries);
+          if (signal.isTriggered && _dirtyObjects.isNotEmpty) {
+            log.w("Some objects were not saved: $_dirtyObjects");
+          }
+        }
+        return ok;
+      });
+
+      // start box auto close thread
+      _boxCleanupThread = Async((signal) async {
+        while (!signal.isTriggered) {
+          // close boxes that have not been accessed for 10 seconds
+          await Future.any([
+            Future.delayed(const Duration(seconds: 10)),
+            signal.future,
+          ]);
+          final now = DateTime.timestamp().millisecondsSinceEpoch;
+          final keys = _boxLastAccessed.entries
+              .where((entry) =>
+                  signal.isTriggered || (now - entry.value > 10 * 1000))
+              .map((entry) => entry.key);
+          keys.forEach((key) => log.d("Closing box: $key"));
+          final boxes =
+              keys.map(_openedBoxes.remove).map((async) => async?.value);
+          _boxLastAccessed.removeWhere((key, _) => keys.contains(key));
+          await Future.wait(boxes.map((box) async {
+            await box?.valueOrNull?.close();
+          }));
         }
         return ok;
       });
@@ -114,7 +139,7 @@ class Storage {
     log.w("Shutting down");
     // force shutdown after 1 second timeout
     await Future.any([
-      _autoSaveThread.cancel(),
+      _autoSaveThread.cancel().whenComplete(_boxCleanupThread.cancel),
       Future.delayed(const Duration(seconds: 1)),
     ]);
     log.w("Storage shutdown complete");
@@ -133,47 +158,29 @@ class Storage {
 
   static AsyncOut<T> withBox<T>(String boxPath, AsyncExecutor1<Box, T> function,
       AsyncSignal signal) async {
-    // busy wait if box is just closing (ref count = 0)
-    while (_boxRefCount[boxPath] == 0) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+    var current = _openedBoxes[boxPath];
     final Box box;
-    if (_boxRefCount.containsKey(boxPath) && _boxRefCount[boxPath]! > 0) {
-      box = _openedBoxes[boxPath]!;
-      _boxRefCount[boxPath] = _boxRefCount[boxPath]! + 1;
-    } else {
-      // this will block other threads from reopening or closing the box
-      _boxRefCount[boxPath] = 0;
+    while (current?.isCompleted == false) {
+      await current!.future;
+      current = _openedBoxes[boxPath];
+    }
+    _boxLastAccessed[boxPath] = DateTime.timestamp().millisecondsSinceEpoch;
+    if (current == null || current.value.failed) {
+      // Box is not used yet
+      final completer = Async<Box>.completer();
+      _openedBoxes[boxPath] = completer;
       final result = await tryOpenBox.execute(boxPath, signal);
-      if (result is Ok) {
-        assert(_boxRefCount[boxPath] == 0);
-        box = result.value;
-        _openedBoxes.putIfAbsent(boxPath, () => box);
-        _boxRefCount[boxPath] = 1;
-      } else {
-        return Err(result);
+      if (result.failed) {
+        _openedBoxes.remove(boxPath)!.complete(result);
+        return result.cast();
       }
+      box = result.value;
+      completer.complete(result);
+    } else {
+      box = current.unwrap;
     }
-    try {
-      return await function(box, signal);
-    } finally {
-      _boxRefCount.update(boxPath, (value) => value - 1);
-      if (_boxRefCount[boxPath] == 0) {
-        // close the box after a short delay
-        final marker = -1 - Random().nextInt(0xffffffff);
-        _boxRefCount[boxPath] = marker;
-        unawaited(Future(() async {
-          await Future.delayed(const Duration(seconds: 5));
-          if (_boxRefCount[boxPath] == marker) {
-            _boxRefCount[boxPath] = 0;
-            await box.close();
-            log.w("box close: $boxPath");
-            _openedBoxes.remove(boxPath);
-            _boxRefCount.remove(boxPath);
-          }
-        }));
-      }
-    }
+    _boxLastAccessed[boxPath] = DateTime.timestamp().millisecondsSinceEpoch;
+    return await function(box, signal);
   }
 
   static AsyncOut<T> putIfAbsent<T extends BoxStorage<T>>(String boxPath,
@@ -227,6 +234,7 @@ class Storage {
       return Err(["Hive disabled", signal]);
     }
     try {
+      log.d("Opening box: $boxPath");
       return Ok(await Hive.openBox(boxPath));
     } catch (e) {
       log.w("Failed to open box", error: e);

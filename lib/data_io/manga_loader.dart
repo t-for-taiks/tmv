@@ -257,12 +257,11 @@ class ArchiveMangaSource extends MangaSource
   AsyncOut getReady(AsyncSignal signal) async {
     final stopwatch = Stopwatch()..start();
     log.t(("MangaSource", "loading archive $archivePath"));
-    try {
-      files = await listArchiveFile(archivePath, signal).throwErr();
-    } catch (e) {
-      log.d("error opening archive $archivePath", error: e);
-      return Err(e, signal);
-    }
+    // rethrow possible archive error as Err
+    await listArchiveFile
+        .execute(archivePath, signal)
+        .catchError(Err.new)
+        .throwErr();
     decompressIsolate = PriorityIsolatePoolManager();
     await decompressIsolate!.createIsolates(
       1,

@@ -103,23 +103,10 @@ class Async<T> implements Future<Result<T>> {
   }
 
   /// If Async is initialized as a completer, this will complete it
-  Future<void> complete(FutureOr<dynamic> value) async {
-    if (value is Future) {
-      return complete(await value);
-    } else if (value is Result<T>) {
-      if (completer != null) {
-        completer!.complete(value);
-        _recordValue(value);
-      }
-    } else if (value is T) {
-      if (completer != null) {
-        completer!.complete(Ok(value));
-        _recordValue(Ok(value));
-      }
-    } else {
-      throw UnimplementedError(
-        "Invalid value type: ${describeIdentity(value)}",
-      );
+  void complete(Result<T> value) {
+    if (completer != null) {
+      completer!.complete(value);
+      _recordValue(value);
     }
   }
 
