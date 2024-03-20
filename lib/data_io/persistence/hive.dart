@@ -68,31 +68,31 @@ class Storage {
             signal.future,
           ]);
           // save each box
-          _dirtyObjects = await _dirtyObjects.entries
+          final objects = _dirtyObjects;
+          _dirtyObjects = {};
+          await objects.entries
               .map(
-                (entry) => (signal) =>
-                    withBox<MapEntry<String, Map<String, BoxStorage>>>.execute(
+                (entry) => (signal) => withBox<Iterable<BoxStorage>>.execute(
                         entry.key, (box, _) async {
                       for (final obj in entry.value.values) {
                         log.t(("persistence", "saving ${obj.tempKey}: $obj"));
                         await box.put(obj.boxKey, obj);
                       }
-                      return Ok(MapEntry(entry.key, {}));
+                      return const Ok([]);
                     }).onFail(
                       (err, _) {
                         log.w((
                           "persistence",
                           "failed to save box ${entry.key}: $err"
                         ));
-                        return Ok(entry);
+                        return Ok(entry.value.values);
                       },
                     ),
               )
               // not checking for signal here, because the signal may have been triggered
               .executeLimited()
-              .map((entry) => entry.value)
-              .toList()
-              .then(Map.fromEntries);
+              .expand((entry) => entry.value)
+              .forEach(markAsDirty);
           if (signal.isTriggered && _dirtyObjects.isNotEmpty) {
             log.w("Some objects were not saved: $_dirtyObjects");
           }

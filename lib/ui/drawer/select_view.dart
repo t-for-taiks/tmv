@@ -302,6 +302,7 @@ class _SelectViewState extends State<SelectView> {
     if (listResult.failed) {
       return listResult;
     }
+    log.d(("Album", "Listed ${listResult.value.length} entries"));
     final dirEntries = listResult.value.map((info) => info.fullPath);
     signal.setProgress(
       total: dirEntries.length.toDouble(),
@@ -322,6 +323,7 @@ class _SelectViewState extends State<SelectView> {
             .where(Result.isOk)
             .map((e) => e.value)
             .toList();
+    log.t(("Album", "Loaded ${sources.length} sources"));
     signal.setProgress(
       progressLabel: "Loading",
       progressFormatter: () => "${signal.current.toInt()}/${sources.length}",

@@ -108,7 +108,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
     boxKey = source.identifier;
   }
 
-  AsyncOut<Map<String, dynamic>> _loadInfo(AsyncSignal signal) => metaInfoFiles
+  AsyncOut<Map<String, dynamic>> _loadInfo(MangaSource source, AsyncSignal signal) => metaInfoFiles
       .followedBy(
         source.files.where(
           (path) => [".txt", ".yaml", ".json"].contains(extension(path)),
@@ -161,7 +161,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       // Currently, only sub-dirs from directory sources are supported
       containsSub = source.containsSub;
 
-      info = await _loadInfo.execute(signal).throwErr();
+      info = await _loadInfo.execute(source, signal).throwErr();
       log.t((
         "MangaCache",
         "MangaCache._loadInfo $identifier in ${stopwatch.elapsed}",
@@ -187,12 +187,12 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
             "MangaCache",
             "Thumbnail created ${source.identifier} in ${stopwatch.elapsed}",
           ));
-          markAsDirty();
           viewData.dispose();
           return Ok(thumbnail);
         },
         signal,
       );
+      markAsDirty();
       stopwatch.reset();
       source.dispose();
     } else {
