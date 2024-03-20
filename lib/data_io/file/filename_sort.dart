@@ -1,8 +1,8 @@
-import 'dart:io';
+import "dart:io";
 
-import 'package:collection/collection.dart';
-import 'package:hive/hive.dart';
-import 'package:lpinyin/lpinyin.dart';
+import "package:collection/collection.dart";
+import "package:hive/hive.dart";
+import "package:lpinyin/lpinyin.dart";
 
 enum DirectorySortBehavior {
   /// Directories are listed first
@@ -44,7 +44,7 @@ class DefaultFileSorter extends FileSorter {
       );
 
   @override
-  String toString() => 'DefaultFileSorter($behavior, reversed: $reversed)';
+  String toString() => "DefaultFileSorter($behavior, reversed: $reversed)";
 }
 
 class FileSorterAdapter implements TypeAdapter<FileSorter> {
@@ -249,7 +249,7 @@ List<String> sortFiles(
     final basename = components.removeLast();
     var node = root;
     for (final dir in components) {
-      node = node.directories.putIfAbsent(dir, () => _FileTreeNode());
+      node = node.directories.putIfAbsent(dir, _FileTreeNode.new);
     }
     node.files.add(basename);
   }

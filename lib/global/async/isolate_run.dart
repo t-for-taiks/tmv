@@ -1,4 +1,4 @@
-part of 'async.dart';
+part of "async.dart";
 
 const int _isolateRunLimit = 8;
 

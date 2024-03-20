@@ -1,16 +1,17 @@
-import 'dart:io';
+import "dart:io";
 
-import 'package:hive/hive.dart';
-import 'package:path/path.dart';
+import "package:hive/hive.dart";
+import "package:path/path.dart";
 
 sealed class FileFilter {
   const FileFilter();
 
   bool test(String file);
 
-  operator &(FileFilter other) => ChainedFilter([this, other], false);
+  FileFilter operator &(FileFilter other) =>
+      ChainedFilter([this, other], false);
 
-  operator |(FileFilter other) => ChainedFilter([this, other], true);
+  FileFilter operator |(FileFilter other) => ChainedFilter([this, other], true);
 
   @override
   String toString() => runtimeType.toString();
@@ -62,7 +63,7 @@ class ExtensionFilter extends FileFilter {
       allowedExtensions.contains(extension(file).toLowerCase());
 
   /// Image and video
-  static ExtensionFilter media = image | video;
+  static ExtensionFilter media = (image | video) as ExtensionFilter;
 
   static FileFilter getType(String path) {
     if (image.test(path)) {
@@ -79,7 +80,7 @@ class ExtensionFilter extends FileFilter {
   }
 
   @override
-  operator |(FileFilter other) {
+  FileFilter operator |(FileFilter other) {
     if (other is! ExtensionFilter) {
       return super | other;
     }
@@ -90,72 +91,72 @@ class ExtensionFilter extends FileFilter {
 
   /// Some image file extensions supported by Flutter
   static const ExtensionFilter image = ExtensionFilter({
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.gif',
-    '.bmp',
-    '.tiff',
-    '.tif',
-    '.webp',
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".webp",
   });
 
   /// Some archive file extensions supported by Flutter
   static const ExtensionFilter archive = ExtensionFilter({
-    '.zip',
-    '.cbz',
-    '.cbt',
-    '.tar',
-    '.gz',
-    '.bz2',
-    '.xz',
+    ".zip",
+    ".cbz",
+    ".cbt",
+    ".tar",
+    ".gz",
+    ".bz2",
+    ".xz",
   });
 
   /// Some video file extensions supported by Flutter
   static const ExtensionFilter video = ExtensionFilter({
-    '.webm',
-    '.mkv',
-    '.flv',
-    '.vob',
-    '.ogv',
-    '.ogg',
-    '.avi',
-    '.mts',
-    '.m2ts',
-    '.ts',
-    '.mov',
-    '.wmv',
-    '.rm',
-    '.rmvb',
-    '.asf',
-    '.mp4',
-    '.m4v',
-    '.mpg',
-    '.mp2',
-    '.mpeg',
-    '.mpe',
-    '.mpv',
-    '.m2v',
-    '.svi',
-    '.3gp',
-    '.3g2',
-    '.f4v',
-    '.f4p',
-    '.f4a',
-    '.f4b',
+    ".webm",
+    ".mkv",
+    ".flv",
+    ".vob",
+    ".ogv",
+    ".ogg",
+    ".avi",
+    ".mts",
+    ".m2ts",
+    ".ts",
+    ".mov",
+    ".wmv",
+    ".rm",
+    ".rmvb",
+    ".asf",
+    ".mp4",
+    ".m4v",
+    ".mpg",
+    ".mp2",
+    ".mpeg",
+    ".mpe",
+    ".mpv",
+    ".m2v",
+    ".svi",
+    ".3gp",
+    ".3g2",
+    ".f4v",
+    ".f4p",
+    ".f4a",
+    ".f4b",
   });
 
   static const ExtensionFilter text = ExtensionFilter({
-    '.txt',
-    '.json',
-    '.yaml',
+    ".txt",
+    ".json",
+    ".yaml",
   });
 
   static const FileFilter any = AllFilter();
 
   @override
   String toString() =>
-      'ExtensionFilter(${allowedExtensions.first}...${allowedExtensions.length})';
+      "ExtensionFilter(${allowedExtensions.first}...${allowedExtensions.length})";
 }
 
 class RecursionFilter extends FileFilter {
@@ -191,7 +192,7 @@ class FileFilterAdapter implements TypeAdapter<FileFilter> {
       case 4:
         return const RecursionFilter();
       default:
-        throw Exception('Unknown FileFilter type: $type');
+        throw Exception("Unknown FileFilter type: $type");
     }
   }
 

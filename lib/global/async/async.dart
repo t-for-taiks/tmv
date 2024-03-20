@@ -1,14 +1,14 @@
-import 'dart:async';
-import 'dart:isolate';
+import "dart:async";
+import "dart:isolate";
 
-import 'package:flutter/foundation.dart';
+import "package:flutter/foundation.dart";
 
-import '../log.dart';
+import "../log.dart";
 
-part 'async_ext.dart';
-part 'async_signal.dart';
-part 'isolate_run.dart';
-part 'result.dart';
+part "async_ext.dart";
+part "async_signal.dart";
+part "isolate_run.dart";
+part "result.dart";
 
 /// Get the caller of the current function outside of this library
 String _getCaller() {
@@ -237,12 +237,10 @@ class Async<T> implements Future<Result<T>> {
     }, signal: signal);
   }
 
-  Async<T> logFail([String? tag]) {
-    return onFail((result, signal) {
-      log.t((tag ?? "Async", result));
-      return result;
-    });
-  }
+  Async<T> logFail([String? tag]) => onFail((result, signal) {
+        log.t((tag ?? "Async", result));
+        return result;
+      });
 
   @override
   Stream<Result<T>> asStream() {

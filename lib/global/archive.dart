@@ -1,12 +1,12 @@
-import 'dart:async';
-import 'dart:typed_data';
+import "dart:async";
+import "dart:typed_data";
 
-import 'package:archive/archive_io.dart';
-import 'package:tmv/data_io/file/file_selection.dart';
+import "package:archive/archive_io.dart";
 
-import 'async/isolate_worker.dart';
-import 'config.dart';
-import 'global.dart';
+import "../data_io/file/file_selection.dart";
+import "async/isolate_worker.dart";
+import "config.dart";
+import "global.dart";
 
 /// An object of this class is an Isolate thread that does archive decompression
 /// on one archive
@@ -65,9 +65,7 @@ class ArchiveDecompressWorker
   }
 
   @override
-  FutureOr<void> shutdown() {
-    return archive.clear();
-  }
+  FutureOr<void> shutdown() => archive.clear();
 }
 
 Archive openArchiveFile(String archivePath) =>

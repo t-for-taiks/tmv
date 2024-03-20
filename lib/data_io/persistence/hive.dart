@@ -1,20 +1,20 @@
-import 'dart:async';
-import 'dart:math';
+import "dart:async";
+import "dart:math";
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:path_provider/path_provider.dart';
+import "package:flutter/foundation.dart";
+import "package:flutter/material.dart";
+import "package:media_kit/media_kit.dart";
+import "package:path_provider/path_provider.dart";
 
-import '../../global/global.dart';
-import '../../ui/manga/manga_view.dart';
-import '../file/file_selection.dart';
-import '../manga_loader.dart';
-import 'manga_cache.dart';
-import 'persistence.dart';
-import 'thumbnail.dart';
+import "../../global/global.dart";
+import "../../ui/manga/manga_view.dart";
+import "../file/file_selection.dart";
+import "../manga_loader.dart";
+import "manga_cache.dart";
+import "persistence.dart";
+import "thumbnail.dart";
 
-export 'package:hive_flutter/hive_flutter.dart';
+export "package:hive_flutter/hive_flutter.dart";
 
 /// If not supported or otherwise inaccessible, this will disable hive storage
 const bool hiveDisabled = kIsWeb;
@@ -162,7 +162,7 @@ class Storage {
         // close the box after a short delay
         final marker = -1 - Random().nextInt(0xffffffff);
         _boxRefCount[boxPath] = marker;
-        Future(() async {
+        unawaited(Future(() async {
           await Future.delayed(const Duration(seconds: 5));
           if (_boxRefCount[boxPath] == marker) {
             _boxRefCount[boxPath] = 0;
@@ -171,7 +171,7 @@ class Storage {
             _openedBoxes.remove(boxPath);
             _boxRefCount.remove(boxPath);
           }
-        });
+        }));
       }
     }
   }
@@ -264,7 +264,7 @@ mixin BoxStorage<T> {
   String get tempKey => formatTempKey(boxPath!, boxKey!);
 
   @override
-  operator ==(Object other) {
+  bool operator ==(Object other) {
     if (other is BoxStorage) {
       return other.tempKey == tempKey;
     }
@@ -277,9 +277,8 @@ mixin BoxStorage<T> {
   }
 
   /// Force save immediately (to permanent location)
-  AsyncOut<void> forceSave(AsyncSignal signal) async {
-    return await Storage.save(this, signal);
-  }
+  AsyncOut<void> forceSave(AsyncSignal signal) async =>
+      await Storage.save(this, signal);
 
   /// Remove this object from cache storage
   void dispose() {

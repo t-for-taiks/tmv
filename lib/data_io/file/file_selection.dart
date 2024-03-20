@@ -1,20 +1,20 @@
-import 'dart:io';
-import 'dart:typed_data';
+import "dart:io";
+import "dart:typed_data";
 
-import 'package:collection/collection.dart';
-import 'package:hive/hive.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:collection/collection.dart";
+import "package:hive/hive.dart";
+import "package:path/path.dart";
+import "package:path_provider/path_provider.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../global/global.dart';
-import 'file_filter.dart';
-import 'filename_sort.dart';
+import "../../global/global.dart";
+import "file_filter.dart";
+import "filename_sort.dart";
 
-export 'file_filter.dart';
-export 'filename_sort.dart';
+export "file_filter.dart";
+export "filename_sort.dart";
 
-part 'file_selection.g.dart';
+part "file_selection.g.dart";
 
 /// Data for a file with flags
 sealed class FileData {

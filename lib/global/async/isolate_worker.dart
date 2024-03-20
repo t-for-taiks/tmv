@@ -1,11 +1,11 @@
-import 'dart:async';
-import 'dart:isolate';
+import "dart:async";
+import "dart:isolate";
 
-import 'package:collection/collection.dart';
-import 'package:flutter/services.dart';
-import 'package:tmv/global/collection/collection.dart';
+import "package:collection/collection.dart";
+import "package:flutter/services.dart";
 
-import '../global.dart';
+import "../collection/collection.dart";
+import "../global.dart";
 
 /// Implement this class to create a functional Isolate
 abstract class IsolateWorker<In, Out> {
@@ -52,7 +52,7 @@ class PriorityIsolatePoolManager<Key, In, Out> {
         }
         final entry = isolatePool.firstWhere((e) => e.isCompleted);
         entry.completer = completer;
-        entry.isolate.process(input).then(completer.complete);
+        unawaited(entry.isolate.process(input).then(completer.complete));
       }
       return ok;
     });
@@ -125,7 +125,7 @@ class IsolateManager<In, Out> {
 
   /// Send input object for [IsolateWorker] to process
   Future<Result<Out>> process(In input) async {
-    if (_closed) throw StateError('Closed');
+    if (_closed) throw StateError("Closed");
     final completer = Completer<Result<Out>>.sync();
     _idCounter += 1;
     _pendingJobs.putIfAbsent(_idCounter, () => completer);
@@ -214,7 +214,7 @@ class IsolateManager<In, Out> {
           sendPort.send((id, output));
         }
       } catch (e) {
-        sendPort.send((id, RemoteError(e.toString(), '')));
+        sendPort.send((id, RemoteError(e.toString(), "")));
       }
       // log.e("message send");
     });

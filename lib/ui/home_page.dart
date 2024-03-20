@@ -1,16 +1,16 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:tmv/data_io/file/file_pick.dart';
-import 'package:tmv/ui/drawer/about.dart';
-import 'package:tmv/ui/drawer/drawer.dart';
-import 'package:tmv/ui/title_bar.dart';
+import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 
-import '../global/global.dart';
-import 'drawer/select_view.dart';
-import 'drop_overlay.dart';
-import 'manga/manga_view.dart';
+import "../data_io/file/file_pick.dart";
+import "../global/global.dart";
+import "drawer/about.dart";
+import "drawer/drawer.dart";
+import "drawer/select_view.dart";
+import "drop_overlay.dart";
+import "manga/manga_view.dart";
+import "title_bar.dart";
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.arguments});

@@ -1,5 +1,6 @@
-import 'package:flutter/foundation.dart';
-import 'package:tmv/data_io/file_cache.dart';
+import "package:flutter/foundation.dart";
+
+import "../data_io/file_cache.dart";
 
 /// Formats for image read
 const supportedImageFormats = [".jpg", ".jpeg", ".webp", ".png", ".gif"];

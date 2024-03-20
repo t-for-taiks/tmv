@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:path/path.dart';
-import 'package:tmv/data_io/persistence/thumbnail.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:flutter/material.dart";
+import "package:path/path.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../global/global.dart';
-import '../../global/helper.dart';
-import '../../global/search.dart';
-import '../../ui/manga/manga_view.dart';
-import '../file/file_io.dart';
-import '../manga_loader.dart';
-import 'hive.dart';
+import "../../global/global.dart";
+import "../../global/helper.dart";
+import "../../global/search.dart";
+import "../../ui/manga/manga_view.dart";
+import "../file/file_io.dart";
+import "../manga_loader.dart";
+import "hive.dart";
+import "thumbnail.dart";
 
-part 'manga_cache.g.dart';
+part "manga_cache.g.dart";
 
 /// Info about a manga
 ///
@@ -52,7 +52,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
               MangaSource.fromIdentifier(identifier),
             )),
           )
-          .catchError((error, stack) => Err(error, stack));
+          .catchError(Err.new);
 
   ThumbnailInfo? get thumbnail => ThumbnailInfo.find(source.identifier);
 
@@ -125,7 +125,7 @@ class MangaCache with BoxStorage<MangaCache>, ReadyFlagMixin<MangaCache> {
       })
       .where(Result.isOk)
       .asyncMap((result) => parseYaml<String, dynamic>(result.value, signal))
-      .handleError((error) => Err(error))
+      .handleError(Err.new)
       .firstWhere((result) => result is Ok, orElse: () => const Ok({}));
 
   AsyncOut<ThumbnailInfo> _loadThumbnail(

@@ -1,6 +1,6 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:collection/collection.dart';
+import "package:collection/collection.dart";
 
 /// A priority queue with unique keys, so that its values can be updated
 class UniquePriority<Key, Data> {

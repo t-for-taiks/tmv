@@ -1,20 +1,20 @@
-import 'dart:ui';
+import "dart:ui";
 
-import 'package:collection/collection.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:path/path.dart';
-import 'package:styled_widget/styled_widget.dart';
-import 'package:tmv/data_io/persistence/thumbnail.dart';
+import "package:collection/collection.dart";
+import "package:file_picker/file_picker.dart";
+import "package:flutter/material.dart";
+import "package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart";
+import "package:path/path.dart";
+import "package:styled_widget/styled_widget.dart";
 
-import '../../data_io/file/file_io.dart';
-import '../../data_io/file/file_selection.dart';
-import '../../data_io/manga_loader.dart';
-import '../../data_io/persistence/manga_cache.dart';
-import '../../data_io/persistence/persistence.dart';
-import '../../global/global.dart';
-import 'album_entry.dart';
+import "../../data_io/file/file_io.dart";
+import "../../data_io/file/file_selection.dart";
+import "../../data_io/manga_loader.dart";
+import "../../data_io/persistence/manga_cache.dart";
+import "../../data_io/persistence/persistence.dart";
+import "../../data_io/persistence/thumbnail.dart";
+import "../../global/global.dart";
+import "album_entry.dart";
 
 class SelectView extends StatefulWidget {
   final bool hidden;
@@ -153,124 +153,125 @@ class _SelectViewState extends State<SelectView> {
     ).clipRRect(all: 8).center();
   }
 
-  Widget buildView(BuildContext context, double width, double height) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Column(
-        children: [
-          /// Open button and search bar
-          Row(
-            children: [
-              const SizedBox(width: 4),
+  Widget buildView(BuildContext context, double width, double height) =>
+      SizedBox(
+        width: width,
+        height: height,
+        child: Column(
+          children: [
+            /// Open button and search bar
+            Row(
+              children: [
+                const SizedBox(width: 4),
 
-              /// "Parent folder" button
-              IconButton(
-                icon: const Icon(Icons.arrow_upward_rounded),
-                onPressed: widget.hidden ||
-                        AppStorage.instance.galleryPath == null
-                    ? null
-                    : () =>
-                        _applyPath(dirname(AppStorage.instance.galleryPath!)),
-              ),
-
-              /// "Open folder" button
-              IconButton(
-                icon: const Icon(Icons.create_new_folder_outlined),
-                onPressed: widget.hidden
-                    ? null
-                    : () async {
-                        final path = await FilePicker.platform.getDirectoryPath(
-                          lockParentWindow: true,
-                        );
-                        if (path != null &&
-                            path != AppStorage.instance.galleryPath) {
-                          await _applyPath(path);
-                        }
-                      },
-              ),
-              const SizedBox(width: 4),
-
-              /// Display gallery path
-              DropdownButton(
-                isExpanded: true,
-                value: AppStorage.instance.galleryPath,
-                hint: Text(
-                  "Select a folder",
-                  style: Theme.of(context).textTheme.labelLarge,
-                ).opacity(0.5),
-                underline: const SizedBox.shrink(),
-                style: Theme.of(context).textTheme.labelLarge,
-                items: AppStorage.instance.galleryHistory.whereNotNull().map(
-                  (path) {
-                    return DropdownMenuItem(
-                      value: path,
-                      child: Text(
-                        path,
-                        style: Theme.of(context).textTheme.labelLarge,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  },
-                ).toList(),
-                onChanged: (path) async {
-                  if (path != AppStorage.instance.galleryPath) {
-                    await _applyPath(path);
-                  }
-                },
-              ).expanded(),
-              const SizedBox(width: 16),
-
-              /// Search bar
-              TextField(
-                onChanged: (value) {
-                  searchQuery = value;
-                  _filteredList = null;
-                  setState(() {});
-                },
-                enabled: !widget.hidden,
-                decoration: const InputDecoration(
-                  hintText: "Search",
-                  border: InputBorder.none,
+                /// "Parent folder" button
+                IconButton(
+                  icon: const Icon(Icons.arrow_upward_rounded),
+                  onPressed: widget.hidden ||
+                          AppStorage.instance.galleryPath == null
+                      ? null
+                      : () =>
+                          _applyPath(dirname(AppStorage.instance.galleryPath!)),
                 ),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ).constrained(maxWidth: width / 3),
-              const SizedBox(width: 8),
 
-              /// Pin button
-              widget.pinButtonBuilder(context),
-              const SizedBox(width: 4),
-            ],
-          ),
+                /// "Open folder" button
+                IconButton(
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  onPressed: widget.hidden
+                      ? null
+                      : () async {
+                          final path =
+                              await FilePicker.platform.getDirectoryPath(
+                            lockParentWindow: true,
+                          );
+                          if (path != null &&
+                              path != AppStorage.instance.galleryPath) {
+                            await _applyPath(path);
+                          }
+                        },
+                ),
+                const SizedBox(width: 4),
 
-          /// Gallery view
-          Stack(children: [
-            (MasonryGridView.extent(
-              padding: const EdgeInsets.only(left: 6, right: 13),
-              maxCrossAxisExtent: 150,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              itemCount: filteredList.length,
-              itemBuilder: (context, index) => AlbumEntry(
-                  cache: filteredList[index],
-                  openMangaCallback: () {
-                    widget.openMangaCallback(filteredList[index]);
+                /// Display gallery path
+                DropdownButton(
+                  isExpanded: true,
+                  value: AppStorage.instance.galleryPath,
+                  hint: Text(
+                    "Select a folder",
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ).opacity(0.5),
+                  underline: const SizedBox.shrink(),
+                  style: Theme.of(context).textTheme.labelLarge,
+                  items: AppStorage.instance.galleryHistory
+                      .whereNotNull()
+                      .map(
+                        (path) => DropdownMenuItem(
+                          value: path,
+                          child: Text(
+                            path,
+                            style: Theme.of(context).textTheme.labelLarge,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (path) async {
+                    if (path != AppStorage.instance.galleryPath) {
+                      await _applyPath(path);
+                    }
                   },
-                  openGalleryCallback: () {
-                    _applyPath(
-                      (filteredList[index].source as DirectoryMangaSource)
-                          .directoryPath,
-                    );
-                  }),
-            ) as Widget)
-                .padding(right: 2),
-            if (loadGalleryProcess?.isCompleted != true)
-              _buildLoadingIndicator(context),
-          ]).expanded(),
-        ],
-      ).clipRect(),
-    );
-  }
+                ).expanded(),
+                const SizedBox(width: 16),
+
+                /// Search bar
+                TextField(
+                  onChanged: (value) {
+                    searchQuery = value;
+                    _filteredList = null;
+                    setState(() {});
+                  },
+                  enabled: !widget.hidden,
+                  decoration: const InputDecoration(
+                    hintText: "Search",
+                    border: InputBorder.none,
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ).constrained(maxWidth: width / 3),
+                const SizedBox(width: 8),
+
+                /// Pin button
+                widget.pinButtonBuilder(context),
+                const SizedBox(width: 4),
+              ],
+            ),
+
+            /// Gallery view
+            Stack(children: [
+              (MasonryGridView.extent(
+                padding: const EdgeInsets.only(left: 6, right: 13),
+                maxCrossAxisExtent: 150,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+                itemCount: filteredList.length,
+                itemBuilder: (context, index) => AlbumEntry(
+                    cache: filteredList[index],
+                    openMangaCallback: () {
+                      widget.openMangaCallback(filteredList[index]);
+                    },
+                    openGalleryCallback: () {
+                      _applyPath(
+                        (filteredList[index].source as DirectoryMangaSource)
+                            .directoryPath,
+                      );
+                    }),
+              ) as Widget)
+                  .padding(right: 2),
+              if (loadGalleryProcess?.isCompleted != true)
+                _buildLoadingIndicator(context),
+            ]).expanded(),
+          ],
+        ).clipRect(),
+      );
 
   AsyncOut<void> load(AsyncSignal signal) async {
     if (AppStorage.instance.galleryPath == null) {

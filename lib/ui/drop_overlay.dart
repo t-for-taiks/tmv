@@ -1,10 +1,10 @@
-import 'package:desktop_drop/desktop_drop.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:styled_widget/styled_widget.dart';
+import "package:desktop_drop/desktop_drop.dart";
+import "package:flutter/foundation.dart";
+import "package:flutter/material.dart";
+import "package:styled_widget/styled_widget.dart";
 
-import '../data_io/file/file_io.dart';
-import '../global/global.dart';
+import "../data_io/file/file_io.dart";
+import "../global/global.dart";
 
 class MessageOverlay extends StatefulWidget {
   MessageOverlay({Key? key})
@@ -74,27 +74,25 @@ class _DropOverlayState extends State<DropOverlay> {
   void onExit() => overlay.hide();
 
   @override
-  Widget build(BuildContext context) {
-    return DropTarget(
-      onDragEntered: (_) => onEnter(),
-      onDragExited: (_) => onExit(),
-      onDragDone: (detail) {
-        if (kIsWeb) {
-          widget.onWebFilesDrop(
-            detail.files
-                .map((file) => WebFile.buildHandle(
-                      nameGetter: () => file.name,
-                      dataGetter: file.readAsBytes,
-                    ))
-                .toList(),
-          );
-        } else {
-          widget.onFilesDrop(
-            detail.files.map((file) => file.path).toList(),
-          );
-        }
-      },
-      child: Stack(children: [widget.child, overlay]),
-    );
-  }
+  Widget build(BuildContext context) => DropTarget(
+        onDragEntered: (_) => onEnter(),
+        onDragExited: (_) => onExit(),
+        onDragDone: (detail) {
+          if (kIsWeb) {
+            widget.onWebFilesDrop(
+              detail.files
+                  .map((file) => WebFile.buildHandle(
+                        nameGetter: () => file.name,
+                        dataGetter: file.readAsBytes,
+                      ))
+                  .toList(),
+            );
+          } else {
+            widget.onFilesDrop(
+              detail.files.map((file) => file.path).toList(),
+            );
+          }
+        },
+        child: Stack(children: [widget.child, overlay]),
+      );
 }

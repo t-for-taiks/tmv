@@ -1,12 +1,12 @@
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:styled_widget/styled_widget.dart';
-import 'package:tmv/global/config.dart';
-import 'package:tmv/global/global.dart';
-import 'package:url_launcher/url_launcher.dart';
+import "package:flutter/gestures.dart";
+import "package:flutter/material.dart";
+import "package:flutter/services.dart";
+import "package:styled_widget/styled_widget.dart";
+import "package:url_launcher/url_launcher.dart";
 
-import 'drawer.dart';
+import "../../global/config.dart";
+import "../../global/global.dart";
+import "drawer.dart";
 
 Future<T?> showDefaultDialog<T>({
   required BuildContext context,
@@ -35,77 +35,77 @@ Widget buildAbout(
   bool show,
   bool Function(DrawerControlSignal) drawerControl,
   Widget Function(BuildContext) pinButtonBuilder,
-) {
-  return SizedBox(
-    width: maxWidth,
-    height: maxHeight,
-    child: Column(
-      children: [
-        const SizedBox(height: 16),
-        Text(
-          defaultTitle,
-          style: Theme.of(context).textTheme.displaySmall,
-        ).fontWeight(FontWeight.w900),
-        const SizedBox(height: 16),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: "Version: ${packageInfo.unwrap.version}   ",
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              TextSpan(
-                text: "GitHub ",
-                style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () {
-                    launchUrl(Uri.parse("https://github.com/t-for-taiks/tmv"));
-                  },
-              ),
-              WidgetSpan(
-                child: Icon(
-                  Icons.open_in_new_rounded,
-                  size: Theme.of(context).textTheme.labelMedium?.fontSize,
-                  color: Theme.of(context).colorScheme.primary,
+) =>
+    SizedBox(
+      width: maxWidth,
+      height: maxHeight,
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Text(
+            defaultTitle,
+            style: Theme.of(context).textTheme.displaySmall,
+          ).fontWeight(FontWeight.w900),
+          const SizedBox(height: 16),
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: "Version: ${packageInfo.unwrap.version}   ",
+                  style: Theme.of(context).textTheme.labelMedium,
                 ),
-                alignment: PlaceholderAlignment.baseline,
-                baseline: TextBaseline.ideographic,
-              ),
-            ],
+                TextSpan(
+                  text: "GitHub ",
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      launchUrl(
+                          Uri.parse("https://github.com/t-for-taiks/tmv"));
+                    },
+                ),
+                WidgetSpan(
+                  child: Icon(
+                    Icons.open_in_new_rounded,
+                    size: Theme.of(context).textTheme.labelMedium?.fontSize,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.ideographic,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        ListTile(
-          title: const Text("View dependency licenses"),
-          onTap: () {
-            showLicensePage(
-              context: context,
-              applicationName: defaultTitle,
-              applicationVersion: packageInfo.unwrap.version,
-              applicationLegalese: "https://github.com/t-for-taiks/tmv",
-            );
-          },
-        ),
-        ListTile(
-          title: const Text("View font licenses"),
-          onTap: () async {
-            final license =
-                await rootBundle.loadString("assets/fonts/LICENSE.txt");
-            if (context.mounted) {
-              showDefaultDialog(
-                  context: context,
-                  child: Text(
-                    license
-                        .replaceAll(RegExp(r"[\x00-\x08\x0E-\x1F]"), "")
-                        .trim(),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ));
-            }
-          },
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 24),
+          ListTile(
+            title: const Text("View dependency licenses"),
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: defaultTitle,
+                applicationVersion: packageInfo.unwrap.version,
+                applicationLegalese: "https://github.com/t-for-taiks/tmv",
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("View font licenses"),
+            onTap: () async {
+              final license =
+                  await rootBundle.loadString("assets/fonts/LICENSE.txt");
+              if (context.mounted) {
+                await showDefaultDialog(
+                    context: context,
+                    child: Text(
+                      license
+                          .replaceAll(RegExp(r"[\x00-\x08\x0E-\x1F]"), "")
+                          .trim(),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ));
+              }
+            },
+          ),
+        ],
+      ),
+    );

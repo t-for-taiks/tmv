@@ -1,19 +1,19 @@
-import 'dart:io';
-import 'dart:typed_data';
+import "dart:io";
+import "dart:typed_data";
 
-import 'package:collection/collection.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path/path.dart';
-import 'package:tmv/data_io/file/file_filter.dart';
-import 'package:tmv/global/async/isolate_worker.dart';
+import "package:collection/collection.dart";
+import "package:hive_flutter/hive_flutter.dart";
+import "package:path/path.dart";
 
-import '../global/archive.dart';
-import '../global/config.dart';
-import '../global/global.dart';
-import '../global/helper.dart';
-import 'file/file_io.dart';
-import 'file/filename_sort.dart';
-import 'file_cache.dart';
+import "../global/archive.dart";
+import "../global/async/isolate_worker.dart";
+import "../global/config.dart";
+import "../global/global.dart";
+import "../global/helper.dart";
+import "file/file_filter.dart";
+import "file/file_io.dart";
+import "file/filename_sort.dart";
+import "file_cache.dart";
 
 /// Exception to be thrown if the source file is missing
 class MangaSourceInvalidException implements Exception {
@@ -448,9 +448,8 @@ class MangaSourceAdapter extends TypeAdapter<MangaSource> {
   final int typeId = 1;
 
   @override
-  MangaSource read(BinaryReader reader) {
-    return MangaSource.fromIdentifier(reader.readString());
-  }
+  MangaSource read(BinaryReader reader) =>
+      MangaSource.fromIdentifier(reader.readString());
 
   @override
   void write(BinaryWriter writer, MangaSource obj) {

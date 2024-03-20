@@ -1,4 +1,4 @@
-import 'dart:collection';
+import "dart:collection";
 
 /// Element in a [LRUPool]
 final class _LRUEntry<Key, Data> extends LinkedListEntry<_LRUEntry<Key, Data>> {

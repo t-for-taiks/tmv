@@ -1,4 +1,4 @@
-part of 'async.dart';
+part of "async.dart";
 
 /// Enum class to hold [Async] results
 sealed class Result<T> {
@@ -100,7 +100,7 @@ class Na extends Result<Never> {
 extension FutureOrAsResult<T> on FutureOr<T> {
   FutureOr<Result<T>> get asOk {
     if (this is Future<T>) {
-      return (this as Future<T>).then((value) => Ok(value));
+      return (this as Future<T>).then(Ok.new);
     }
     return Ok(this as T);
   }

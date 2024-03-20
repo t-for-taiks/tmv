@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:tmv/ui/home_page.dart';
-import 'package:window_manager/window_manager.dart';
+import "package:flutter/material.dart";
+import "package:window_manager/window_manager.dart";
 
-import 'data_io/persistence/persistence.dart';
-import 'global/global.dart';
+import "data_io/persistence/persistence.dart";
+import "global/global.dart";
+import "ui/home_page.dart";
 
 /// Usage: exe <file_or_dir_path>
 void main(List<String> arguments) async {
@@ -22,7 +22,7 @@ void main(List<String> arguments) async {
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
     );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
     });
@@ -39,15 +39,13 @@ class MyApp extends StatelessWidget {
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: const ColorScheme.dark(),
-        useMaterial3: true,
-        fontFamily: "HarmonyOS_Sans_SC",
-      ),
-      home: MyHomePage(arguments: arguments),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+        title: "Flutter Demo",
+        theme: ThemeData(
+          colorScheme: const ColorScheme.dark(),
+          useMaterial3: true,
+          fontFamily: "HarmonyOS_Sans_SC",
+        ),
+        home: MyHomePage(arguments: arguments),
+      );
 }

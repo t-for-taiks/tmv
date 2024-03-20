@@ -1,12 +1,12 @@
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
+import "package:file_picker/file_picker.dart";
+import "package:flutter/foundation.dart";
 
-import '../../global/config.dart';
-import '../../global/global.dart';
-import '../../ui/manga/manga_view.dart';
-import '../manga_loader.dart';
-import 'file_filter.dart';
-import 'file_io.dart';
+import "../../global/config.dart";
+import "../../global/global.dart";
+import "../../ui/manga/manga_view.dart";
+import "../manga_loader.dart";
+import "file_filter.dart";
+import "file_io.dart";
 
 /// Tries to load specified files as current manga
 ///

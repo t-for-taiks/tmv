@@ -1,4 +1,4 @@
-import 'package:collection/collection.dart';
+import "package:collection/collection.dart";
 
 final class _PriorityPoolEntry<Key, Data>
     implements Comparable<_PriorityPoolEntry<Key, Data>> {

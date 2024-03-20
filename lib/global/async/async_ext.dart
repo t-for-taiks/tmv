@@ -1,4 +1,4 @@
-part of 'async.dart';
+part of "async.dart";
 
 typedef AsyncExecutor0<Out> = AsyncOut<Out> Function(AsyncSignal signal);
 typedef AsyncExecutor1<In1, Out> = AsyncOut<Out> Function(
@@ -152,7 +152,7 @@ extension FutureAsyncExtension<T> on FutureOr<Result<T>> {
 
   Future<Result<T>> get asFuture {
     if (this is Future<Result<T>>) {
-      return (this as Future<Result<T>>);
+      return this as Future<Result<T>>;
     }
     return Future.value(this);
   }
@@ -237,15 +237,13 @@ extension ExecutorLimitedExecution<T> on Iterable<AsyncExecutor0<T>> {
   }
 
   /// Execute until the first success
-  Async<T> firstOk([AsyncSignal? signal]) {
-    return Async<T>((signal) async {
-      for (final computation in this) {
-        final result = await computation(signal);
-        if (result is Ok) {
-          return result;
+  Async<T> firstOk([AsyncSignal? signal]) => Async<T>((signal) async {
+        for (final computation in this) {
+          final result = await computation(signal);
+          if (result is Ok) {
+            return result;
+          }
         }
-      }
-      return Err("No success", signal);
-    });
-  }
+        return Err("No success", signal);
+      });
 }

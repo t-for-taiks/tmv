@@ -1,18 +1,18 @@
-import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui';
+import "dart:async";
+import "dart:math" as math;
+import "dart:ui";
 
-import 'package:flutter/material.dart';
-import 'package:flutter_context_menu/flutter_context_menu.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
-import 'package:styled_widget/styled_widget.dart';
-import 'package:tmv/data_io/manga_loader.dart';
-import 'package:tmv/data_io/persistence/thumbnail.dart';
-import 'package:tmv/global/config.dart';
+import "package:flutter/material.dart";
+import "package:flutter_context_menu/flutter_context_menu.dart";
+import "package:media_kit/media_kit.dart";
+import "package:media_kit_video/media_kit_video.dart";
+import "package:styled_widget/styled_widget.dart";
 
-import '../../data_io/file/file_selection.dart';
-import '../../global/global.dart';
+import "../../data_io/file/file_selection.dart";
+import "../../data_io/manga_loader.dart";
+import "../../data_io/persistence/thumbnail.dart";
+import "../../global/config.dart";
+import "../../global/global.dart";
 
 class MediaDisplay extends StatefulWidget {
   final AsyncExecutor0<FileData> dataSource;
@@ -137,7 +137,7 @@ class _MediaDisplayState extends State<MediaDisplay> {
           await _getVideoDimensions.execute();
         }
         log.t(("schedule", "decode complete $debugInfo"));
-        widget.buildComplete.complete(totalSizeBytes);
+        await widget.buildComplete.complete(totalSizeBytes);
         return ok;
       });
 
@@ -250,38 +250,36 @@ class _MediaDisplayState extends State<MediaDisplay> {
     );
   }
 
-  ContextMenu _buildContextMenu(BuildContext context) {
-    return ContextMenu(
-      entries: [
-        MenuItem(
-          label: 'Set as Manga Cover',
-          icon: Icons.image_outlined,
-          onSelected: () async {
-            if (!mounted || widget.hidden || widget.blurred || data == null) {
-              return;
-            }
-            final identifier = widget.source.identifier;
-            final ImageMemoryData image;
-            if (data is ImageMemoryData) {
-              image = data as ImageMemoryData;
-            } else {
-              final screenshot = await videoPlayer!.screenshot();
-              if (screenshot == null) {
+  ContextMenu _buildContextMenu(BuildContext context) => ContextMenu(
+        entries: [
+          MenuItem(
+            label: "Set as Manga Cover",
+            icon: Icons.image_outlined,
+            onSelected: () async {
+              if (!mounted || widget.hidden || widget.blurred || data == null) {
                 return;
               }
-              image = ImageMemoryData(
-                bytes: screenshot,
-                byteSize: screenshot.length,
-              );
-            }
-            await ThumbnailProcessor.process
-                .execute(image)
-                .map((thumbnail) => ThumbnailInfo.put(identifier, thumbnail));
-          },
-        ),
-      ],
-    );
-  }
+              final identifier = widget.source.identifier;
+              final ImageMemoryData image;
+              if (data is ImageMemoryData) {
+                image = data as ImageMemoryData;
+              } else {
+                final screenshot = await videoPlayer!.screenshot();
+                if (screenshot == null) {
+                  return;
+                }
+                image = ImageMemoryData(
+                  bytes: screenshot,
+                  byteSize: screenshot.length,
+                );
+              }
+              await ThumbnailProcessor.process
+                  .execute(image)
+                  .map((thumbnail) => ThumbnailInfo.put(identifier, thumbnail));
+            },
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,7 @@
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
-import 'package:just_the_tooltip/just_the_tooltip.dart';
-import 'package:styled_widget/styled_widget.dart';
+import "package:flutter/gestures.dart";
+import "package:flutter/material.dart";
+import "package:just_the_tooltip/just_the_tooltip.dart";
+import "package:styled_widget/styled_widget.dart";
 
 class VerticalMangaScroll extends StatelessWidget {
   /// Current page starting from 0
@@ -56,7 +56,7 @@ class VerticalMangaScroll extends StatelessWidget {
               color: Theme.of(context).colorScheme.onInverseSurface,
             ),
           ).padding(horizontal: 6, top: 2, bottom: 4),
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
@@ -100,9 +100,8 @@ class VerticalMangaScroll extends StatelessWidget {
       );
 
   /// Distance between two ticks
-  double tickDistance(double totalHeight) {
-    return (totalHeight - scrollBlockHeight) / (total - 1);
-  }
+  double tickDistance(double totalHeight) =>
+      (totalHeight - scrollBlockHeight) / (total - 1);
 
   Widget buildScrollTicks(BuildContext context, double height) {
     // If there are too many pages, instead just render a block

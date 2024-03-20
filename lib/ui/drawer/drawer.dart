@@ -1,9 +1,9 @@
-import 'dart:math' as math;
-import 'dart:ui';
+import "dart:math" as math;
+import "dart:ui";
 
-import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
-import 'package:styled_widget/styled_widget.dart';
+import "package:collection/collection.dart";
+import "package:flutter/material.dart";
+import "package:styled_widget/styled_widget.dart";
 
 /// A builder for the view of a drawer entry
 ///
@@ -181,74 +181,74 @@ class DrawerViewState extends State<DrawerView> {
   ///   }
   /// }
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final maxWidth = constraints.maxWidth;
-      final maxHeight = constraints.maxHeight;
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final maxHeight = constraints.maxHeight;
 
-      /// Hidden views with [DrawerEntry.neverDestroy] flag
-      final hiddenViews = widget.drawerEntries
-          .where((entry) => entry.neverDestroy)
-          .whereIndexed((index, element) => index != activeIndex)
-          .mapIndexed((index, entry) => entry.viewBuilder(
-                context,
-                0,
-                0,
-                false,
-                (signal) => drawerControlCallback(signal, index),
-                pinButtonBuilder,
-              ));
+        /// Hidden views with [DrawerEntry.neverDestroy] flag
+        final hiddenViews = widget.drawerEntries
+            .where((entry) => entry.neverDestroy)
+            .whereIndexed((index, element) => index != activeIndex)
+            .mapIndexed((index, entry) => entry.viewBuilder(
+                  context,
+                  0,
+                  0,
+                  false,
+                  (signal) => drawerControlCallback(signal, index),
+                  pinButtonBuilder,
+                ));
 
-      return Row(children: [
-        /// Navigation bar
-        _buildBar(context, maxWidth, maxHeight),
+        return Row(children: [
+          /// Navigation bar
+          _buildBar(context, maxWidth, maxHeight),
 
-        /// Active view if pinned
-        if (pinned && activeIndex >= 0) _buildActive(maxWidth, maxHeight),
-        Stack(
-          children: [
-            /// Main view
-            widget.child,
+          /// Active view if pinned
+          if (pinned && activeIndex >= 0) _buildActive(maxWidth, maxHeight),
+          Stack(
+            children: [
+              /// Main view
+              widget.child,
 
-            /// Unpinned active view with blur background
-            if (!pinned && activeIndex >= 0)
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                child: ColoredBox(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.2),
-                  child: const SizedBox.expand(),
+              /// Unpinned active view with blur background
+              if (!pinned && activeIndex >= 0)
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                  child: ColoredBox(
+                    color:
+                        Theme.of(context).colorScheme.surface.withOpacity(0.2),
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-              ),
 
-            if (!pinned && activeIndex >= 0)
-              Row(
-                children: [
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: ColoredBox(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withOpacity(0.7),
-                      child: _buildActive(maxWidth, maxHeight),
-                    ),
-                  ).clipRect(),
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: close,
-                      child: const SizedBox.expand(),
-                    ),
-                  ).clipRect().expanded(),
-                ],
-              ),
+              if (!pinned && activeIndex >= 0)
+                Row(
+                  children: [
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: ColoredBox(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withOpacity(0.7),
+                        child: _buildActive(maxWidth, maxHeight),
+                      ),
+                    ).clipRect(),
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: close,
+                        child: const SizedBox.expand(),
+                      ),
+                    ).clipRect().expanded(),
+                  ],
+                ),
 
-            /// Hidden views
-            ...hiddenViews,
-          ],
-        ).clipRect().expanded(),
-      ]);
-    });
-  }
+              /// Hidden views
+              ...hiddenViews,
+            ],
+          ).clipRect().expanded(),
+        ]);
+      });
 }

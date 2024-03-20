@@ -1,9 +1,9 @@
-import 'package:flutter/foundation.dart';
-import 'package:tmv/global/collection/collection.dart';
+import "package:flutter/foundation.dart";
 
-import '../global/config.dart';
-import '../global/global.dart';
-import '../global/helper.dart';
+import "../global/collection/collection.dart";
+import "../global/config.dart";
+import "../global/global.dart";
+import "../global/helper.dart";
 
 /// File cache middleware to buffer external data read
 ///

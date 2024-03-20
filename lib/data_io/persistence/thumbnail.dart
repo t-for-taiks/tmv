@@ -1,22 +1,22 @@
-import 'dart:async';
-import 'dart:io';
-import 'dart:math' as math;
-import 'dart:ui';
+import "dart:async";
+import "dart:io";
+import "dart:math" as math;
+import "dart:ui";
 
-import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
-import 'package:flutter/services.dart';
-import 'package:image/image.dart';
-import 'package:image_size_getter/image_size_getter.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart";
+import "package:flutter/services.dart";
+import "package:image/image.dart";
+import "package:image_size_getter/image_size_getter.dart";
+import "package:path/path.dart";
+import "package:path_provider/path_provider.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../global/async/isolate_worker.dart';
-import '../../global/global.dart';
-import '../file/file_selection.dart';
-import 'hive.dart';
+import "../../global/async/isolate_worker.dart";
+import "../../global/global.dart";
+import "../file/file_selection.dart";
+import "hive.dart";
 
-part 'thumbnail.g.dart';
+part "thumbnail.g.dart";
 
 /// Used to calculate thumbnail size for images (total pixel)
 const int thumbnailSize = 200000;
@@ -137,7 +137,7 @@ class ThumbnailProcessor {
           _initialized = Completer();
           await manager.createIsolates.execute(
             thumbnailIsolateCount,
-            () => ThumbnailWorker(),
+            ThumbnailWorker.new,
           );
           _initialized!.complete();
         } else if (!_initialized!.isCompleted) {
@@ -201,9 +201,7 @@ class ThumbnailWorker extends IsolateWorker<FileData, ThumbnailInfo> {
       format: "jpeg",
       quality: 80,
     )
-        .then((v) {
-      return v;
-    }).then((success) async {
+        .then((success) async {
       if (!success) {
         return Err("Failed to create thumbnail");
       }

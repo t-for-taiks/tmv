@@ -1,5 +1,5 @@
-import 'package:collection/collection.dart';
-import 'package:logger/logger.dart';
+import "package:collection/collection.dart";
+import "package:logger/logger.dart";
 
 Logger get log => Log.instance;
 

@@ -22,7 +22,16 @@ linter:
   # producing the lint.
   rules:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    always_declare_return_types: true
+    prefer_double_quotes: true
+    prefer_expression_function_bodies: true
+    prefer_final_in_for_each: true
+    prefer_relative_imports: true
+    unawaited_futures: true
+    unnecessary_lambdas: true
+    unnecessary_parenthesis: true
+    unnecessary_raw_strings: true
+    use_decorated_box: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

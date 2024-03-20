@@ -1,28 +1,28 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:math' as math;
+import "dart:convert";
+import "dart:io";
+import "dart:math" as math;
 
-import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:styled_widget/styled_widget.dart';
-import 'package:tmv/data_io/file/file_selection.dart';
-import 'package:tmv/global/collection/collection.dart';
-import 'package:tmv/global/config.dart';
-import 'package:tmv/ui/manga/media_display.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:collection/collection.dart";
+import "package:flutter/foundation.dart";
+import "package:flutter/gestures.dart";
+import "package:flutter/material.dart";
+import "package:flutter/services.dart";
+import "package:styled_widget/styled_widget.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../data_io/file/file_pick.dart';
-import '../../data_io/manga_loader.dart';
-import '../../data_io/persistence/manga_cache.dart';
-import '../../data_io/persistence/persistence.dart';
-import '../../global/global.dart';
-import '../../global/helper.dart';
-import 'manga_scroll.dart';
+import "../../data_io/file/file_pick.dart";
+import "../../data_io/file/file_selection.dart";
+import "../../data_io/manga_loader.dart";
+import "../../data_io/persistence/manga_cache.dart";
+import "../../data_io/persistence/persistence.dart";
+import "../../global/collection/collection.dart";
+import "../../global/config.dart";
+import "../../global/global.dart";
+import "../../global/helper.dart";
+import "manga_scroll.dart";
+import "media_display.dart";
 
-part 'manga_view.g.dart';
+part "manga_view.g.dart";
 
 /// [MangaSource] have to be ready
 @HiveType(typeId: 0)
@@ -539,32 +539,31 @@ class MangaViewState extends State<MangaView>
     );
   }
 
-  Widget _buildDebug(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        "fillFactor: ${fillFactor.toStringAsFixed(2)}",
-        "current page: ${data!.currentPage}",
-        "total entries loaded: ${children.length}",
-        "preloadMultiplier: ${preloadMultiplier.toStringAsFixed(2)}",
-        "preloadRange: $preloadLower - $preloadUpper",
-        "totalBytes: ${kb(totalBytes)}",
-      ]
-          .map(
-            (text) => Text(
-              text,
-              textAlign: TextAlign.left,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          )
-          .toList(),
-    )
-        .backgroundBlur(16)
-        .backgroundColor(Theme.of(context).colorScheme.surface.withOpacity(0.7))
-        .clipRRect(all: 8)
-        .padding(all: 8);
-  }
+  Widget _buildDebug(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          "fillFactor: ${fillFactor.toStringAsFixed(2)}",
+          "current page: ${data!.currentPage}",
+          "total entries loaded: ${children.length}",
+          "preloadMultiplier: ${preloadMultiplier.toStringAsFixed(2)}",
+          "preloadRange: $preloadLower - $preloadUpper",
+          "totalBytes: ${kb(totalBytes)}",
+        ]
+            .map(
+              (text) => Text(
+                text,
+                textAlign: TextAlign.left,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            )
+            .toList(),
+      )
+          .backgroundBlur(16)
+          .backgroundColor(
+              Theme.of(context).colorScheme.surface.withOpacity(0.7))
+          .clipRRect(all: 8)
+          .padding(all: 8);
 
   Widget _buildContent(BuildContext context) {
     if (data == null) {

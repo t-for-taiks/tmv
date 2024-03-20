@@ -1,4 +1,4 @@
-import 'package:tmv/data_io/file/file_selection.dart';
+import "../data_io/file/file_selection.dart";
 
 class Searchable {
   /// Map prefix to list of index of appearance in [text]

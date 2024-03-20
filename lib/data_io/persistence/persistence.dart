@@ -1,15 +1,15 @@
-import 'dart:io';
+import "dart:io";
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:flutter/foundation.dart";
+import "package:flutter/services.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../global/global.dart';
-import 'hive.dart';
+import "../../global/global.dart";
+import "hive.dart";
 
-export 'hive.dart';
+export "hive.dart";
 
-part 'persistence.g.dart';
+part "persistence.g.dart";
 
 /// Wraps initialization with a ReadyFlagMixin, to ensure the init is run once
 ///
@@ -27,7 +27,7 @@ class Lifecycle with ReadyFlagMixin<Lifecycle> {
       if (kDebugMode) {
         throw Exception();
       }
-      SystemNavigator.pop();
+      await SystemNavigator.pop();
       exit(0);
     }
   }

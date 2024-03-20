@@ -1,17 +1,17 @@
-import 'dart:io';
-import 'dart:ui';
+import "dart:io";
+import "dart:ui";
 
-import 'package:flutter/material.dart';
-import 'package:flutter_context_menu/flutter_context_menu.dart';
-import 'package:path/path.dart';
-import 'package:styled_widget/styled_widget.dart';
-import 'package:tmv/data_io/manga_loader.dart';
-import 'package:tmv/data_io/persistence/thumbnail.dart';
-import 'package:tmv/ui/drawer/about.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:yaml_writer/yaml_writer.dart';
+import "package:flutter/material.dart";
+import "package:flutter_context_menu/flutter_context_menu.dart";
+import "package:path/path.dart";
+import "package:styled_widget/styled_widget.dart";
+import "package:url_launcher/url_launcher.dart";
+import "package:yaml_writer/yaml_writer.dart";
 
-import '../../data_io/persistence/manga_cache.dart';
+import "../../data_io/manga_loader.dart";
+import "../../data_io/persistence/manga_cache.dart";
+import "../../data_io/persistence/thumbnail.dart";
+import "about.dart";
 
 /// Display a manga (from a ready [MangaCache])
 class AlbumEntry extends StatefulWidget {
@@ -51,14 +51,14 @@ class _AlbumEntryState extends State<AlbumEntry> {
         entries: [
           // const MenuHeader(text: "Context Menu"),
           MenuItem(
-            label: 'Open as Manga',
+            label: "Open as Manga",
             icon: Icons.file_open_outlined,
             onSelected: () {
               widget.openMangaCallback();
             },
           ),
           MenuItem(
-            label: 'Open as Gallery',
+            label: "Open as Gallery",
             icon: Icons.drive_folder_upload,
             onSelected: () {
               if (widget.cache.source is DirectoryMangaSource) {
@@ -77,7 +77,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
             },
           ),
           MenuItem(
-            label: 'Show Info',
+            label: "Show Info",
             icon: Icons.info_outline_rounded,
             onSelected: () {
               showDialog(
@@ -130,7 +130,7 @@ class _AlbumEntryState extends State<AlbumEntry> {
             },
           ),
           MenuItem(
-            label: 'Open in File Explorer',
+            label: "Open in File Explorer",
             icon: Icons.screen_search_desktop_outlined,
             onSelected: () {
               if (widget.cache.source.path == null) {
@@ -148,9 +148,9 @@ class _AlbumEntryState extends State<AlbumEntry> {
             },
           ),
           MenuItem(
-            label: 'Set as Parent Gallery Cover',
+            label: "Set as Parent Gallery Cover",
             icon: Icons.image_outlined,
-            onSelected: () async {
+            onSelected: () {
               if (widget.cache.source.path == null) {
                 showDefaultDialog(
                   context: context,

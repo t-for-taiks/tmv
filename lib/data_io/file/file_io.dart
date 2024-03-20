@@ -1,13 +1,13 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
+import "dart:async";
+import "dart:convert";
+import "dart:io";
+import "dart:typed_data";
 
-import 'package:path/path.dart';
-import 'package:yaml/yaml.dart';
+import "package:path/path.dart";
+import "package:yaml/yaml.dart";
 
-import '../../global/config.dart';
-import '../../global/global.dart';
+import "../../global/config.dart";
+import "../../global/global.dart";
 
 /// Limit size to parse yaml to 10MB
 const yamlSizeLimit = 10 * 1024 * 1024;
@@ -45,7 +45,7 @@ AsyncOut<List<ListedInfo>> listDirectory(
             .list(recursive: recursive)
             .handleError((_) {}) // Ignore files that can't be accessed
             .map((file) => file.path)
-            .where((path) => (condition?.call(path) ?? true))
+            .where((path) => condition?.call(path) ?? true)
             .map<Result<ListedInfo>>((path) {
               if (FileSystemEntity.isFileSync(path)) {
                 return Ok(ListedFileInfo(
@@ -107,15 +107,14 @@ class WebFile with ReadyFlagMixin<WebFile> {
   static Async<WebFile> buildHandle({
     required FutureOr<String> Function() nameGetter,
     required FutureOr<Uint8List> Function() dataGetter,
-  }) {
-    return Async((_) async {
-      final name = await nameGetter();
-      return Ok(WebFile(
-        name: name,
-        dataRead: (signal) => dataGetter().asOk,
-      ));
-    });
-  }
+  }) =>
+      Async((_) async {
+        final name = await nameGetter();
+        return Ok(WebFile(
+          name: name,
+          dataRead: (signal) => dataGetter().asOk,
+        ));
+      });
 
   @override
   AsyncOut getReady(AsyncSignal signal) =>

@@ -1,4 +1,4 @@
-part of 'async.dart';
+part of "async.dart";
 
 typedef ProgressCallback = void Function(AsyncSignal signal);
 
